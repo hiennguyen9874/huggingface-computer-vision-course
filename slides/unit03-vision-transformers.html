@@ -63,14 +63,16 @@ body{font-family:var(--font-body);color:var(--text);overflow-wrap:break-word}
   <p class="slide__label reveal">UNIT 03 · COMPUTER VISION</p><h1 class="slide__display reveal">Vision<br><span style="color:var(--accent)">Transformers</span></h1><div class="title-rule reveal"></div><p class="slide__subtitle reveal">Từ patch token đến model sẵn sàng deploy</p>
 </section>
 <section class="slide slide--divider"><span class="slide__number">01</span><div class="divider-copy"><p class="slide__label reveal">Nền tảng</p><h2 class="slide__heading reveal">Ảnh trở thành chuỗi token</h2><p class="slide__subtitle reveal">ViT · inductive bias · transfer learning</p></div></section>
-<section class="slide slide--diagram"><p class="slide__label reveal">01 / Vision Transformer</p><h2 class="slide__heading reveal">Cùng một ảnh, một chuỗi token</h2><div class="diagram-shell reveal"><div class="mermaid-wrap"><div class="zoom-controls"><button onclick="zoomDiagram(this,1.2)">+</button><button onclick="zoomDiagram(this,.8)">−</button><button onclick="resetZoom(this)">↺</button><button onclick="openDiagramFullscreen(this)">⛶</button></div><pre class="mermaid">flowchart LR
-  A["Ảnh&lt;br/&gt;224×224"] --> B["Patch&lt;br/&gt;16×16"]
-  B --> C["196 patch&lt;br/&gt;tokens"]
-  C --> D["Linear&lt;br/&gt;projection"]
-  D --> E["Optional: prepend&lt;br/&gt;CLS token"]
-  E --> F["Positional&lt;br/&gt;embedding"]
-  F --> G["Transformer&lt;br/&gt;encoder"]
-  G --> H["Task-specific head&lt;br/&gt;classification&lt;br/&gt;detection · segmentation"]
+<section class="slide slide--diagram"><p class="slide__label reveal">01 / Vision Transformer</p><h2 class="slide__heading reveal">Cùng một ảnh, một chuỗi token</h2><div class="diagram-shell reveal"><div class="mermaid-wrap"><div class="zoom-controls"><button onclick="zoomDiagram(this,1.2)">+</button><button onclick="zoomDiagram(this,.8)">−</button><button onclick="resetZoom(this)">↺</button><button onclick="openDiagramFullscreen(this)">⛶</button></div><pre class="mermaid">flowchart TD
+  subgraph tokenize["Patchify &amp; project"]
+    direction LR
+    A["Ảnh&lt;br/&gt;224×224"] --> B["Patch&lt;br/&gt;16×16"] --> C["196 patch&lt;br/&gt;tokens"] --> D["Linear&lt;br/&gt;projection"]
+  end
+  subgraph contextualize["Encode &amp; predict"]
+    direction LR
+    E["Optional CLS&lt;br/&gt;token"] --> F["Positional&lt;br/&gt;embedding"] --> G["Transformer&lt;br/&gt;encoder"] --> H["Task head&lt;br/&gt;classification&lt;br/&gt;detection · segmentation"]
+  end
+  tokenize --> contextualize
   classDef image fill:#79b8e822,stroke:#79b8e8,stroke-width:2px
   classDef token fill:#64d69b22,stroke:#64d69b,stroke-width:2px
   classDef model fill:#f3b45b22,stroke:#f3b45b,stroke-width:2px
