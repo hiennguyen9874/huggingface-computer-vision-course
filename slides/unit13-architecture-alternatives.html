@@ -273,7 +273,21 @@ return loss</code></pre></div><p class="code-caption reveal">Hiera dựa vào MA
   var INITIAL_ZOOM=1;
   function zoomDiagram(btn,f){var w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');var z=parseFloat(t.dataset.zoom||INITIAL_ZOOM);z=Math.min(Math.max(z*f,.55),4);t.dataset.zoom=z;t.style.zoom=z;}
   function resetZoom(btn){var w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');t.dataset.zoom=INITIAL_ZOOM;t.style.zoom=INITIAL_ZOOM;}
-  function openDiagramFullscreen(btn){var w=btn.closest('.mermaid-wrap'),svg=w.querySelector('svg');if(!svg)return;var clone=svg.cloneNode(true);clone.style.zoom='';var bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#0b1014';var html='<!doctype html><html><head><meta charset="utf-8"><title>Diagram</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:'+bg+';padding:40px;box-sizing:border-box}svg{max-width:100%;max-height:90vh;height:auto}</style></head><body>'+clone.outerHTML+'</body></html>';window.open('data:text/html;charset=utf-8,'+encodeURIComponent(html),'_blank');}
+  function openDiagramFullscreen(btn){
+    var w=btn.closest('.mermaid-wrap'),svg=w.querySelector('svg');
+    if(!svg)return;
+    var clone=svg.cloneNode(true);clone.style.zoom='';
+    var bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#0b1014';
+    var popup=window.open('about:blank','_blank');
+    if(!popup)return;
+    var doc=popup.document;
+    doc.title='Diagram';
+    doc.body.style.cssText='margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:'+bg+';padding:40px;box-sizing:border-box';
+    var style=doc.createElement('style');
+    style.textContent='svg{max-width:100%;max-height:90vh;height:auto}';
+    doc.head.appendChild(style);
+    doc.body.appendChild(clone);
+  }
   document.querySelectorAll('.mermaid-wrap').forEach(function(w){w.addEventListener('wheel',function(e){if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();var t=w.querySelector('.mermaid'),z=parseFloat(t.dataset.zoom||1);z=Math.min(Math.max(z*(e.deltaY<0?1.1:.9),.55),4);t.dataset.zoom=z;t.style.zoom=z;},{passive:false});var sx,sy,sl,st,pan=false;w.addEventListener('mousedown',function(e){if(e.target.closest('.zoom-controls'))return;pan=true;sx=e.clientX;sy=e.clientY;sl=w.scrollLeft;st=w.scrollTop;w.classList.add('is-panning');});window.addEventListener('mousemove',function(e){if(!pan)return;w.scrollLeft=sl-(e.clientX-sx);w.scrollTop=st-(e.clientY-sy);});window.addEventListener('mouseup',function(){pan=false;w.classList.remove('is-panning');});});
   function SlideEngine(){this.deck=document.querySelector('.deck');this.slides=[].slice.call(document.querySelectorAll('.slide'));this.current=0;this.total=this.slides.length;this.buildChrome();this.bindEvents();this.observe();this.update();}
   SlideEngine.prototype.buildChrome=function(){var self=this,bar=document.createElement('div');bar.className='deck-progress';document.body.appendChild(bar);this.bar=bar;var dots=document.createElement('div');dots.className='deck-dots';this.slides.forEach(function(_,i){var d=document.createElement('button');d.className='deck-dot';d.title='Slide '+(i+1);d.setAttribute('aria-label','Ga tới slide '+(i+1));d.onclick=function(){self.goTo(i)};dots.appendChild(d)});document.body.appendChild(dots);this.dots=[].slice.call(dots.children);var ctr=document.createElement('div');ctr.className='deck-counter';document.body.appendChild(ctr);this.counter=ctr;var hints=document.createElement('div');hints.className='deck-hints';hints.textContent='← → / Space / scroll để điều hướng';document.body.appendChild(hints);this.hints=hints;this.hintTimer=setTimeout(function(){hints.classList.add('faded')},4500);var arrows=document.createElement('div');arrows.className='deck-arrows';var prev=document.createElement('button');prev.innerHTML='‹';prev.title='Slide trước';prev.setAttribute('aria-label','Slide trước');prev.onclick=function(){self.prev()};var next=document.createElement('button');next.innerHTML='›';next.title='Slide tiếp';next.setAttribute('aria-label','Slide tiếp');next.onclick=function(){self.next()};arrows.append(prev,next);document.body.appendChild(arrows);};

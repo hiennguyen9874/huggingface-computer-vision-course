@@ -245,20 +245,189 @@ Dockerfile          <span class="cm"># reproducible environment</span></code></p
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 const dark=window.matchMedia('(prefers-color-scheme: dark)').matches;
 mermaid.initialize({startOnLoad:false,theme:'base',look:'classic',themeVariables:{primaryColor:dark?'#203338':'#eef6e8',primaryBorderColor:dark?'#b7df69':'#6e9630',primaryTextColor:dark?'#e7f0ed':'#18262a',secondaryColor:dark?'#182b2d':'#e4f2ed',secondaryBorderColor:dark?'#70c7b5':'#398c78',secondaryTextColor:dark?'#e7f0ed':'#18262a',tertiaryColor:dark?'#2d2820':'#fff1d7',tertiaryBorderColor:dark?'#efb45e':'#b97819',tertiaryTextColor:dark?'#e7f0ed':'#18262a',lineColor:dark?'#91aaa4':'#5d7770',fontSize:'18px',fontFamily:'IBM Plex Sans, sans-serif'}});
-await mermaid.run();
 function autoFit(){document.querySelectorAll('.mermaid svg').forEach(svg=>{svg.removeAttribute('height');svg.style.width='100%';svg.style.maxWidth='100%';svg.style.height='auto'});document.querySelectorAll('.slide__kpi-val').forEach(e=>{if(e.scrollWidth>e.clientWidth){e.style.transform='scale('+e.clientWidth/e.scrollWidth+')';e.style.transformOrigin='left top'}})}
-autoFit(); new SlideEngine();
+mermaid.run().then(()=>{autoFit();window.dispatchEvent(new Event('mermaid:ready'))}).catch(error=>{console.error('Mermaid render failed:',error);window.dispatchEvent(new Event('mermaid:ready'))});
 </script>
 <script>
-const INITIAL_ZOOM=1;
-function zoomDiagram(btn,f){const w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');const z=parseFloat(t.dataset.zoom||INITIAL_ZOOM);const n=Math.min(Math.max(z*f,.5),4);t.dataset.zoom=n;t.style.zoom=n}
-function resetZoom(btn){const t=btn.closest('.mermaid-wrap').querySelector('.mermaid');t.dataset.zoom=INITIAL_ZOOM;t.style.zoom=INITIAL_ZOOM}
-function openDiagramFullscreen(btn){const w=btn.closest('.mermaid-wrap'),svg=w.querySelector('svg');if(!svg)return;const clone=svg.cloneNode(true);const html='<!doctype html><html><head><meta charset="utf-8"><title>Diagram</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1214;padding:30px}svg{max-width:100%;max-height:92vh;height:auto}</style></head><body>'+clone.outerHTML+'</body></html>';window.open(URL.createObjectURL(new Blob([html],{type:'text/html'})),'_blank')}
-document.querySelectorAll('.mermaid-wrap').forEach(w=>{let sx,sy,sl,st,pan=false;w.addEventListener('wheel',e=>{if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();const t=w.querySelector('.mermaid'),z=parseFloat(t.dataset.zoom||1),n=Math.min(Math.max(z*(e.deltaY<0?1.1:.9),.5),4);t.dataset.zoom=n;t.style.zoom=n},{passive:false});w.addEventListener('mousedown',e=>{if(e.target.closest('.zoom-controls'))return;pan=true;sx=e.clientX;sy=e.clientY;sl=w.scrollLeft;st=w.scrollTop;w.classList.add('is-panning')});window.addEventListener('mousemove',e=>{if(!pan)return;w.scrollLeft=sl-(e.clientX-sx);w.scrollTop=st-(e.clientY-sy)});window.addEventListener('mouseup',()=>{pan=false;w.classList.remove('is-panning')})});
-function SlideEngine(){this.deck=document.querySelector('.deck');this.slides=[...document.querySelectorAll('.slide')];this.current=0;this.total=this.slides.length;this.buildChrome();this.bind();this.observe();this.update()}
-SlideEngine.prototype.buildChrome=function(){const bar=document.createElement('div');bar.className='deck-progress';document.body.appendChild(bar);this.bar=bar;const dots=document.createElement('div');dots.className='deck-dots';this.dots=[];this.slides.forEach((s,i)=>{const d=document.createElement('button');d.className='deck-dot';d.title='Slide '+(i+1);d.onclick=()=>this.goTo(i);dots.appendChild(d);this.dots.push(d)});document.body.appendChild(dots);const ctr=document.createElement('div');ctr.className='deck-counter';document.body.appendChild(ctr);this.counter=ctr;const arrows=document.createElement('div');arrows.className='deck-arrows';arrows.innerHTML='<button aria-label="Slide trước">‹</button><button aria-label="Slide sau">›</button>';arrows.children[0].onclick=()=>this.prev();arrows.children[1].onclick=()=>this.next();document.body.appendChild(arrows);const hints=document.createElement('div');hints.className='deck-hints';hints.textContent='← → hoặc cuộn để chuyển slide';document.body.appendChild(hints);this.hints=hints;this.hintTimer=setTimeout(()=>hints.classList.add('faded'),4500)};
-SlideEngine.prototype.bind=function(){document.addEventListener('keydown',e=>{if(e.target.closest('.mermaid-wrap,.table-scroll,.slide__code-block,input,textarea,[contenteditable]'))return;if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();this.next()}else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();this.prev()}else if(e.key==='Home'){e.preventDefault();this.goTo(0)}else if(e.key==='End'){e.preventDefault();this.goTo(this.total-1)}this.hints.classList.add('faded')});let y;this.deck.addEventListener('touchstart',e=>y=e.touches[0].clientY,{passive:true});this.deck.addEventListener('touchend',e=>{const dy=y-e.changedTouches[0].clientY;if(Math.abs(dy)>50)dy>0?this.next():this.prev()})};
-SlideEngine.prototype.observe=function(){const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');this.current=this.slides.indexOf(e.target);this.update()}}),{threshold:.5});this.slides.forEach(s=>obs.observe(s))};SlideEngine.prototype.goTo=function(i){this.slides[Math.max(0,Math.min(i,this.total-1))].scrollIntoView({behavior:'smooth'})};SlideEngine.prototype.next=function(){if(this.current<this.total-1)this.goTo(this.current+1)};SlideEngine.prototype.prev=function(){if(this.current>0)this.goTo(this.current-1)};SlideEngine.prototype.update=function(){this.bar.style.width=((this.current+1)/this.total*100)+'%';this.dots.forEach((d,i)=>d.classList.toggle('active',i===this.current));this.counter.textContent=(this.current+1)+' / '+this.total};
+const INITIAL_ZOOM = 1;
+
+function zoomDiagram(button, factor) {
+  const wrapper = button.closest('.mermaid-wrap');
+  const diagram = wrapper.querySelector('.mermaid');
+  const current = parseFloat(diagram.dataset.zoom || INITIAL_ZOOM);
+  const next = Math.min(Math.max(current * factor, 0.5), 4);
+  diagram.dataset.zoom = next;
+  diagram.style.zoom = next;
+}
+
+function resetZoom(button) {
+  const diagram = button.closest('.mermaid-wrap').querySelector('.mermaid');
+  diagram.dataset.zoom = INITIAL_ZOOM;
+  diagram.style.zoom = INITIAL_ZOOM;
+}
+
+function openDiagramFullscreen(button) {
+  const svg = button.closest('.mermaid-wrap').querySelector('svg');
+  if (!svg) return;
+
+  const html = [
+    '<!doctype html><html><head><meta charset="utf-8"><title>Diagram</title>',
+    '<style>body{margin:0;min-height:100vh;display:grid;place-items:center;',
+    'background:#0b1214;padding:30px}svg{max-width:100%;max-height:92vh;height:auto}</style>',
+    '</head><body>',
+    svg.cloneNode(true).outerHTML,
+    '</' + 'body></html>'
+  ].join('');
+
+  window.open(
+    URL.createObjectURL(new Blob([html], { type: 'text/html' })),
+    '_blank'
+  );
+}
+
+document.querySelectorAll('.mermaid-wrap').forEach(wrapper => {
+  let startX;
+  let startY;
+  let startLeft;
+  let startTop;
+  let isPanning = false;
+
+  wrapper.addEventListener('wheel', event => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    zoomDiagram(wrapper.querySelector('.zoom-controls button'), event.deltaY < 0 ? 1.1 : 0.9);
+  }, { passive: false });
+
+  wrapper.addEventListener('mousedown', event => {
+    if (event.target.closest('.zoom-controls')) return;
+    isPanning = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    startLeft = wrapper.scrollLeft;
+    startTop = wrapper.scrollTop;
+    wrapper.classList.add('is-panning');
+  });
+
+  window.addEventListener('mousemove', event => {
+    if (!isPanning) return;
+    wrapper.scrollLeft = startLeft - (event.clientX - startX);
+    wrapper.scrollTop = startTop - (event.clientY - startY);
+  });
+
+  window.addEventListener('mouseup', () => {
+    isPanning = false;
+    wrapper.classList.remove('is-panning');
+  });
+});
+
+function SlideEngine() {
+  this.deck = document.querySelector('.deck');
+  this.slides = [...document.querySelectorAll('.slide')];
+  this.current = 0;
+  this.total = this.slides.length;
+  this.buildChrome();
+  this.bind();
+  this.observe();
+  this.update();
+}
+
+SlideEngine.prototype.buildChrome = function () {
+  const bar = document.createElement('div');
+  bar.className = 'deck-progress';
+  document.body.appendChild(bar);
+  this.bar = bar;
+
+  const dots = document.createElement('div');
+  dots.className = 'deck-dots';
+  this.dots = [];
+  this.slides.forEach((slide, index) => {
+    const dot = document.createElement('button');
+    dot.className = 'deck-dot';
+    dot.title = 'Slide ' + (index + 1);
+    dot.onclick = () => this.goTo(index);
+    dots.appendChild(dot);
+    this.dots.push(dot);
+  });
+  document.body.appendChild(dots);
+
+  const counter = document.createElement('div');
+  counter.className = 'deck-counter';
+  document.body.appendChild(counter);
+  this.counter = counter;
+
+  const arrows = document.createElement('div');
+  arrows.className = 'deck-arrows';
+  arrows.innerHTML = '<button aria-label="Slide trước">‹</button><button aria-label="Slide sau">›</button>';
+  arrows.children[0].onclick = () => this.prev();
+  arrows.children[1].onclick = () => this.next();
+  document.body.appendChild(arrows);
+
+  const hints = document.createElement('div');
+  hints.className = 'deck-hints';
+  hints.textContent = '← → hoặc cuộn để chuyển slide';
+  document.body.appendChild(hints);
+  this.hints = hints;
+  this.hintTimer = setTimeout(() => hints.classList.add('faded'), 4500);
+};
+
+SlideEngine.prototype.bind = function () {
+  document.addEventListener('keydown', event => {
+    if (event.target.closest('.mermaid-wrap,.table-scroll,.slide__code-block,input,textarea,[contenteditable]')) return;
+    if (['ArrowRight', 'ArrowDown', ' ', 'PageDown'].includes(event.key)) {
+      event.preventDefault();
+      this.next();
+    } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(event.key)) {
+      event.preventDefault();
+      this.prev();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      this.goTo(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      this.goTo(this.total - 1);
+    }
+    this.hints.classList.add('faded');
+  });
+
+  let touchY;
+  this.deck.addEventListener('touchstart', event => {
+    touchY = event.touches[0].clientY;
+  }, { passive: true });
+  this.deck.addEventListener('touchend', event => {
+    const delta = touchY - event.changedTouches[0].clientY;
+    if (Math.abs(delta) > 50) delta > 0 ? this.next() : this.prev();
+  });
+};
+
+SlideEngine.prototype.observe = function () {
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('visible');
+      this.current = this.slides.indexOf(entry.target);
+      this.update();
+    });
+  }, { threshold: 0.5 });
+  this.slides.forEach(slide => observer.observe(slide));
+};
+
+SlideEngine.prototype.goTo = function (index) {
+  this.slides[Math.max(0, Math.min(index, this.total - 1))]
+    .scrollIntoView({ behavior: 'smooth' });
+};
+SlideEngine.prototype.next = function () {
+  if (this.current < this.total - 1) this.goTo(this.current + 1);
+};
+SlideEngine.prototype.prev = function () {
+  if (this.current > 0) this.goTo(this.current - 1);
+};
+SlideEngine.prototype.update = function () {
+  this.bar.style.width = ((this.current + 1) / this.total * 100) + '%';
+  this.dots.forEach((dot, index) => dot.classList.toggle('active', index === this.current));
+  this.counter.textContent = (this.current + 1) + ' / ' + this.total;
+};
+
+new SlideEngine();
 </script>
 </body>
 </html>
