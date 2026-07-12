@@ -1,0 +1,1 @@
+# Copied version of [github.com/huggingface/computer-vision-course](https://github.com/huggingface/computer-vision-course)
