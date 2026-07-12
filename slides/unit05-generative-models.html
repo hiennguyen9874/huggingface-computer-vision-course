@@ -434,10 +434,10 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: clamp(12p
       <p class="slide__label reveal">Layer-wise control</p>
       <h2 class="slide__heading reveal">AdaIN + noise injection</h2>
       <ul class="bullets">
-        <li class="reveal"><strong>AdaIN:</strong> chuẩn hóa feature map rồi scale/bias bằng style <code>w</code>.</li>
+        <li class="reveal"><strong>AdaIN:</strong> chuẩn hóa feature map rồi scale/bias bằng style <code>y = A(w)</code>.</li>
         <li class="reveal"><code>AdaIN(x,y) = y<sub>s</sub> · (x−μ)/σ + y<sub>b</sub></code></li>
         <li class="reveal"><strong>Noise injection:</strong> thêm stochastic details như sợi tóc, lỗ chân lông và texture.</li>
-        <li class="reveal">Style riêng ở mỗi layer giúp latent “disentangled” hơn.</li>
+        <li class="reveal">Mapping <code>z→w</code> hỗ trợ disentangle; inject style ở từng layer để điều khiển nhiều mức chi tiết.</li>
       </ul>
     </div>
     <div class="slide__aside reveal"><svg viewBox="0 0 300 300" width="260" aria-label="AdaIN style control"><rect x="28" y="55" width="100" height="190" rx="12" fill="var(--surface-2)" stroke="var(--accent)"/><rect x="172" y="55" width="100" height="190" rx="12" fill="var(--surface-2)" stroke="var(--amber)"/><path d="M128 100h44M128 150h44M128 200h44" stroke="var(--muted)" stroke-width="2" stroke-dasharray="4 4"/><circle cx="78" cy="110" r="20" fill="var(--accent-dim)"/><circle cx="78" cy="165" r="30" fill="var(--accent-dim)"/><circle cx="78" cy="215" r="12" fill="var(--accent-dim)"/><text x="78" y="35" text-anchor="middle" fill="var(--muted)" font-family="var(--font-mono)" font-size="11">FEATURE MAP</text><text x="222" y="35" text-anchor="middle" fill="var(--amber)" font-family="var(--font-mono)" font-size="11">STYLE w</text><text x="150" y="278" text-anchor="middle" fill="var(--accent)" font-family="var(--font-mono)" font-size="11">MODULATE</text></svg></div>
@@ -472,9 +472,10 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: clamp(12p
       <div class="diffusion-track">
         <div class="diff-node final">x₀<br>real</div><div class="arrow">→</div><div class="diff-node">x₁<br>+ noise</div><div class="arrow">→</div><div class="diff-node">xₜ<br>noisy</div><div class="arrow">→</div><div class="diff-node noisy">xT<br>noise</div>
       </div>
-      <div class="diff-label"><span class="amber">FORWARD · thêm Gaussian noise</span><span class="accent">REVERSE · neural denoise</span></div>
+      <div class="diff-label"><span class="amber">FORWARD · thêm Gaussian noise</span></div>
       <div style="height:28px;border-bottom:1px dashed var(--border);margin-bottom:22px;"></div>
       <div class="diffusion-track"><div class="diff-node noisy">xT<br>random</div><div class="arrow">→</div><div class="diff-node">xT−1</div><div class="arrow">→</div><div class="diff-node">…</div><div class="arrow">→</div><div class="diff-node final">x₀<br>new image</div></div>
+      <div class="diff-label"><span class="accent">REVERSE · neural denoise</span></div>
       <p class="note" style="text-align:center;margin-top:22px;">Inference bắt đầu bằng Gaussian noise, rồi denoise từng bước.</p>
     </div>
   </div>
@@ -487,7 +488,7 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: clamp(12p
       <h2 class="reveal">Cùng trực giác,<br>khác ngôn ngữ toán</h2>
       <div class="card-grid" style="margin-top:20px;">
         <div class="lab-card reveal"><h3>DDPM</h3><p>Học reverse process; forward giống encoding, reverse giống decoding.</p></div>
-        <div class="lab-card amber-card reveal"><h3>NCSN</h3><p>Học score <code>∇x log p(x)</code> ở nhiều noise level.</p></div>
+        <div class="lab-card amber-card reveal"><h3>NCSN</h3><p>Học score <code>∇x log p<sub>σ</sub>(x)</code> của dữ liệu đã nhiễu ở nhiều noise level.</p></div>
       </div>
     </div>
     <div class="split-panel">
@@ -538,7 +539,7 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: clamp(12p
 
 <section class="slide slide--code">
   <p class="slide__label reveal">Diffusers mental model</p>
-  <h2 class="slide__heading reveal" style="text-align:center;">Ba workflow, cùng một pipeline call</h2>
+  <h2 class="slide__heading reveal" style="text-align:center;">Ba workflow, cùng một kiểu gọi pipeline</h2>
   <div class="code-card reveal">
     <span class="file-label">diffusers.py</span>
     <pre><span class="code-key">pipe</span> = AutoPipelineForText2Image.from_pretrained(
@@ -549,8 +550,10 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: clamp(12p
     generator=torch.Generator(device=<span class="code-string">"cuda"</span>).manual_seed(<span class="code-string">31</span>)
 ).images[<span class="code-string">0</span>]
 
-<span class="code-comment"># image-to-image: pipe(prompt, image=init_image)</span>
-<span class="code-comment"># inpainting: pipe(prompt, image=init, mask_image=mask)</span></pre>
+<span class="code-comment"># image-to-image: dùng AutoPipelineForImage2Image</span>
+<span class="code-comment"># pipe_i2i(prompt, image=init_image)</span>
+<span class="code-comment"># inpainting: dùng AutoPipelineForInpainting</span>
+<span class="code-comment"># pipe_inpaint(prompt, image=init, mask_image=mask)</span></pre>
   </div>
   <p class="note reveal" style="text-align:center;max-width:820px;margin-top:16px;"><code>fp16</code> giảm memory · <code>cuda</code> chạy GPU · seed giúp reproducibility · CPU offload giúp máy ít VRAM hơn.</p>
 </section>
@@ -586,7 +589,7 @@ image = pipe(<span class="code-string">"a castle drawn with crayon style"</span>
 <span class="code-comment"># 0.0 = tắt · 0.7–1.0 = vùng nên thử</span>
 pipe.unfuse_lora()</pre>
   </div>
-  <div class="card-grid three reveal" style="width:min(900px,100%);margin-top:18px;"><div class="lab-card"><h3>Nhẹ</h3><p>Thường vài chục đến vài trăm MB.</p></div><div class="lab-card amber-card"><h3>Nhanh</h3><p>Train ít tham số hơn.</p></div><div class="lab-card coral-card"><h3>Composable</h3><p>Load / unload / fuse vào model gốc.</p></div></div>
+  <div class="card-grid three reveal" style="width:min(900px,100%);margin-top:18px;"><div class="lab-card"><h3>Nhẹ</h3><p>Thường khoảng 50–500 MB.</p></div><div class="lab-card amber-card"><h3>Nhanh</h3><p>Train ít tham số hơn.</p></div><div class="lab-card coral-card"><h3>Composable</h3><p>Load / unload / fuse vào model gốc.</p></div></div>
 </section>
 
 <section class="slide slide--diagram">
@@ -594,7 +597,7 @@ pipe.unfuse_lora()</pre>
   <h2 class="slide__heading reveal">ControlNet giữ bố cục, diffusion lo style</h2>
   <div class="diagram-box reveal">
     <div class="control-line">
-      <div class="control-source">EDGE MAP<br>POSE · DEPTH<br>SEGMENTATION</div><div class="arrow">+</div><div class="control-source" style="border-color:var(--accent);color:var(--accent);background:var(--accent-dim);">PROMPT<br>“colorful bird”</div><div class="arrow">→</div><div class="big-node" style="width:220px;"><strong>ControlNet<br>+ U-Net</strong><small>structure condition<br>+ semantic condition</small></div><div class="arrow">→</div><div class="control-source" style="border-color:var(--coral);color:var(--coral);background:var(--coral-dim);">OUTPUT<br>shape giữ nguyên<br>style đổi theo prompt</div>
+      <div class="control-source">EDGE MAP<br>POSE · DEPTH<br>SEGMENTATION</div><div class="arrow">+</div><div class="control-source" style="border-color:var(--accent);color:var(--accent);background:var(--accent-dim);">PROMPT<br>“colorful bird”</div><div class="arrow">→</div><div class="big-node" style="width:220px;"><strong>ControlNet<br>+ U-Net</strong><small>structure condition<br>+ semantic condition</small></div><div class="arrow">→</div><div class="control-source" style="border-color:var(--coral);color:var(--coral);background:var(--coral-dim);">OUTPUT<br>shape tương tự<br>style đổi theo prompt</div>
     </div>
   </div>
   <p class="note reveal" style="text-align:center;margin-top:16px;">Khi diffusion tự do bố cục không đủ nhất quán, ControlNet ép nó tôn trọng một ảnh điều kiện.</p>
@@ -630,7 +633,7 @@ pipe.unfuse_lora()</pre>
       <ul class="bullets">
         <li class="reveal"><strong>Adversarial loss:</strong> G/F làm ảnh giả giống domain đích.</li>
         <li class="reveal"><strong>Cycle loss:</strong> <code>||F(G(x))−x|| + ||G(F(y))−y||</code>, thường dùng L1.</li>
-        <li class="reveal"><strong>Identity loss:</strong> ảnh đã ở đúng domain thì gần như không đổi — hữu ích để giữ màu.</li>
+        <li class="reveal"><strong>Identity loss (optional):</strong> ảnh đã ở đúng domain thì gần như không đổi — hữu ích để giữ màu.</li>
         <li class="reveal"><strong>Least Squares GAN:</strong> giảm vanishing gradient và giúp training ổn định hơn.</li>
       </ul>
     </div>
@@ -656,7 +659,7 @@ pipe.unfuse_lora()</pre>
   <div class="table-wrap reveal"><div class="table-scroll"><table class="data-table">
     <thead><tr><th>Metric</th><th>Dùng cho</th><th>Ý tưởng</th><th>Hướng tốt</th></tr></thead>
     <tbody>
-      <tr><td><code>FID</code></td><td>Tập ảnh sinh</td><td>Khoảng cách Fréchet giữa feature Inception của real và fake.</td><td class="accent">Thấp hơn</td></tr>
+      <tr><td><code>FID</code></td><td>Tập ảnh sinh</td><td>Khoảng cách Fréchet giữa hai phân phối Gaussian ước lượng từ feature Inception-v3 của real và fake.</td><td class="accent">Thấp hơn</td></tr>
       <tr><td><code>PSNR</code></td><td>Restoration / SR</td><td>Gần MSE; thường 25–34 là ổn, &gt;34 rất tốt.</td><td class="accent">Cao hơn</td></tr>
       <tr><td><code>SSIM</code></td><td>Có ground truth</td><td>Đo luminance, contrast, structure; range 0–1.</td><td class="accent">Gần 1</td></tr>
       <tr><td><code>IS</code></td><td>Ảnh sinh</td><td>Ảnh rõ class và toàn tập đa dạng.</td><td class="accent">Cao hơn</td></tr>
@@ -682,7 +685,7 @@ pipe.unfuse_lora()</pre>
       <h2 class="slide__heading reveal">Năm rủi ro cần đặt cạnh mỗi demo</h2>
       <ul class="bullets">
         <li class="reveal"><strong>Deepfake:</strong> misinformation, fake news, thao túng chính trị, mất niềm tin media.</li>
-        <li class="reveal"><strong>Harassment:</strong> ảnh giả, bôi nhọ, non-consensual synthetic media.</li>
+        <li class="reveal"><strong>Privacy & harassment:</strong> ảnh giả, bôi nhọ, non-consensual synthetic media và xâm phạm quyền riêng tư.</li>
         <li class="reveal"><strong>Beauty standards:</strong> body image, self-esteem và áp lực xã hội.</li>
         <li class="reveal"><strong>Bias:</strong> dữ liệu internet khuếch đại stereotype và thiếu đại diện.</li>
         <li class="reveal"><strong>Copyright:</strong> scrape tác phẩm nghệ sĩ không xin phép, credit hoặc bồi thường.</li>

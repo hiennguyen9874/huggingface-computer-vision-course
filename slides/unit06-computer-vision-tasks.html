@@ -1255,7 +1255,7 @@
                 <code>bag</code>.
               </li>
               <li class="reveal">
-                Không cần biết vật thể nằm ở đâu trong ảnh.
+                Không cần trả về vị trí của vật thể trong ảnh.
               </li>
               <li class="reveal">
                 CNN: ResNet, EfficientNet, ConvNeXt; Transformer: ViT, DeiT,
@@ -1304,7 +1304,7 @@ result = classifier(image)
           class="slide__subtitle reveal"
           style="margin-top: 20px; text-align: center"
         >
-          Output thường là một vector xác suất:
+          Output thường là danh sách nhãn kèm score (thường là xác suất):
           <span class="mono" style="color: var(--amber)"
             >golden retriever · 0.91</span
           >
@@ -1565,16 +1565,16 @@ result = classifier(image)
       <section class="slide">
         <p class="slide__label reveal">Object Detection trong thực tế</p>
         <h2 class="slide__heading reveal">
-          Khi máy cần nhìn thấy các vật thể đang hành động.
+          Khi máy cần thấy nhiều vật thể và vị trí của chúng.
         </h2>
         <div class="app-grid">
           <div class="app-card reveal">
             <h3>Xe tự lái</h3>
-            <p>Người đi bộ, xe khác, đèn giao thông, biển báo, làn đường.</p>
+            <p>Người đi bộ, xe khác, đèn giao thông, biển báo, vật cản.</p>
           </div>
           <div class="app-card reveal">
             <h3>An ninh</h3>
-            <p>Người xâm nhập, hành vi bất thường, vật thể bị bỏ quên.</p>
+            <p>Người, phương tiện và vật thể cần theo dõi trong vùng giám sát.</p>
           </div>
           <div class="app-card reveal">
             <h3>Y tế</h3>
@@ -1632,7 +1632,7 @@ bounding_boxes = pipe(image)
             <div class="kpi__value" style="color: var(--teal)">IoU</div>
             <div class="kpi__label">box overlap</div>
             <div class="kpi__detail">
-              Giao / hợp giữa predicted box và ground truth.
+              Tỷ lệ giao / hợp giữa predicted box và ground truth.
             </div>
           </div>
           <div class="kpi reveal">
@@ -1653,7 +1653,7 @@ bounding_boxes = pipe(image)
             <div class="kpi__value" style="color: var(--blue)">mAP</div>
             <div class="kpi__label">tổng hợp</div>
             <div class="kpi__detail">
-              AP trung bình trên class và nhiều ngưỡng IoU.
+              AP trung bình theo class; có thể trung bình thêm qua nhiều ngưỡng IoU.
             </div>
           </div>
         </div>
@@ -2120,7 +2120,8 @@ masks = pipe(raw_image)
           class="slide__subtitle reveal"
           style="margin-top: 18px; text-align: center"
         >
-          Zero-shot transfer: xử lý domain mới mà không cần fine-tune trực tiếp.
+          Ví dụ zero-shot: có thể áp dụng lên ảnh chưa thấy mà không cần
+          fine-tune trực tiếp; chất lượng vẫn phụ thuộc prompt và domain.
         </p>
       </section>
 
@@ -2183,7 +2184,9 @@ masks = pipe(raw_image)
         </div>
         <div class="code-block reveal">
           <span class="code-file">metrics.py</span>
-          <pre><code><span class="kw">def</span> <span class="fn">mask_iou</span>(pred, true):
+          <pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">mask_iou</span>(pred, true):
     pred, true = pred.astype(bool), true.astype(bool)
     inter = np.logical_and(pred, true).sum()
     union = np.logical_or(pred, true).sum()
@@ -2193,15 +2196,17 @@ masks = pipe(raw_image)
     <span class="kw">return</span> (pred == true).sum() / true.size
 
 <span class="kw">def</span> <span class="fn">dice</span>(pred, true):
+    pred, true = pred.astype(bool), true.astype(bool)
     inter = np.logical_and(pred, true).sum()
-    <span class="kw">return</span> <span class="num">2</span> * inter / (pred.sum() + true.sum())</code></pre>
+    total = pred.sum() + true.sum()
+    <span class="kw">return</span> <span class="num">2</span> * inter / total <span class="kw">if</span> total <span class="kw">else</span> <span class="num">1.0</span></code></pre>
         </div>
         <p
           class="slide__subtitle reveal"
           style="margin-top: 18px; text-align: center"
         >
-          Edge case quan trọng: nếu union hoặc tổng diện tích bằng 0, cần quy
-          ước rõ output.
+          Ví dụ dùng mask nhị phân; nhiều class cần tính từng class rồi average.
+          Nếu union hoặc tổng diện tích bằng 0, cần quy ước rõ output.
         </p>
       </section>
 
