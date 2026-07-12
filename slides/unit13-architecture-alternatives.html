@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit 13 — Ngoài Transformer truyền thống</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  --bg: #0b1014;
+  --surface: #121a20;
+  --surface2: #19242b;
+  --surface3: #22313a;
+  --border: rgba(180, 210, 200, .12);
+  --border-bright: rgba(180, 210, 200, .24);
+  --text: #eaf2ee;
+  --text-dim: #9aada5;
+  --accent: #55d889;
+  --accent-dim: rgba(85, 216, 137, .12);
+  --amber: #f2b84b;
+  --amber-dim: rgba(242, 184, 75, .12);
+  --coral: #ef806d;
+  --coral-dim: rgba(239, 128, 109, .12);
+  --blue: #76b7e8;
+  --blue-dim: rgba(118, 183, 232, .12);
+  --code-bg: #070b0e;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f5f7f4; --surface: #ffffff; --surface2: #e8efeb; --surface3: #dbe7e0;
+    --border: rgba(20, 55, 40, .12); --border-bright: rgba(20, 55, 40, .24);
+    --text: #15221c; --text-dim: #5d7067; --accent: #137a43; --accent-dim: rgba(19,122,67,.1);
+    --amber: #a66800; --amber-dim: rgba(166,104,0,.1); --coral: #b84c3c; --coral-dim: rgba(184,76,60,.1);
+    --blue: #236c9e; --blue-dim: rgba(35,108,158,.1); --code-bg: #17231d;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: var(--font-body); color: var(--text); background: var(--bg); overflow: hidden; overflow-wrap: break-word; }
+.deck { height: 100dvh; overflow-y: auto; scroll-snap-type: y mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+.slide { height: 100dvh; scroll-snap-align: start; overflow: hidden; position: relative; display: flex; flex-direction: column; justify-content: center; padding: clamp(34px, 6vh, 74px) clamp(38px, 8vw, 118px); isolation: isolate; opacity: 0; transform: translateY(30px) scale(.985); transition: opacity .55s cubic-bezier(.16,1,.3,1), transform .55s cubic-bezier(.16,1,.3,1); background-image: radial-gradient(ellipse at 20% 80%, var(--accent-dim), transparent 52%); }
+.slide:nth-child(even) { background-image: radial-gradient(ellipse at 82% 18%, var(--amber-dim), transparent 48%); }
+.slide.visible { opacity: 1; transform: none; }
+.slide .reveal { opacity: 0; transform: translateY(16px); transition: opacity .45s ease, transform .45s ease; }
+.slide.visible .reveal { opacity: 1; transform: none; }
+.slide.visible .reveal:nth-child(1) { transition-delay: .08s; }.slide.visible .reveal:nth-child(2) { transition-delay: .16s; }.slide.visible .reveal:nth-child(3) { transition-delay: .24s; }.slide.visible .reveal:nth-child(4) { transition-delay: .32s; }.slide.visible .reveal:nth-child(5) { transition-delay: .4s; }.slide.visible .reveal:nth-child(6) { transition-delay: .48s; }
+@media (prefers-reduced-motion: reduce) { .slide, .slide .reveal { opacity: 1 !important; transform: none !important; transition: none !important; } }
+.deck-progress { position: fixed; inset: 0 auto auto 0; height: 3px; background: var(--accent); z-index: 100; transition: width .3s ease; }
+.deck-dots { position: fixed; right: clamp(12px,2vw,24px); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 7px; z-index: 100; padding: 8px 6px; background: rgba(11,16,20,.5); border: 1px solid var(--border); border-radius: 20px; backdrop-filter: blur(8px); }
+.deck-dot { width: 7px; height: 7px; border: 0; border-radius: 50%; background: var(--text-dim); opacity: .32; padding: 0; cursor: pointer; transition: .2s; }.deck-dot:hover { opacity: .75; }.deck-dot.active { opacity: 1; transform: scale(1.55); background: var(--accent); }
+.deck-counter { position: fixed; right: clamp(12px,2vw,24px); bottom: clamp(12px,2vh,22px); z-index: 100; font: 12px var(--font-mono); color: var(--text-dim); text-shadow: 0 1px 3px #000; }
+.deck-hints { position: fixed; left: 50%; bottom: clamp(12px,2vh,22px); transform: translateX(-50%); z-index: 100; font: 11px var(--font-mono); color: var(--text-dim); opacity: .7; white-space: nowrap; transition: opacity .5s; }.deck-hints.faded { opacity: 0; }
+.deck-arrows { position: fixed; left: clamp(12px,2vw,24px); bottom: clamp(10px,2vh,20px); z-index: 100; display: flex; gap: 5px; }.deck-arrows button { width: 31px; height: 27px; border: 1px solid var(--border-bright); border-radius: 6px; background: rgba(11,16,20,.62); color: var(--text); cursor: pointer; font: 19px var(--font-mono); line-height: 1; backdrop-filter: blur(8px); }.deck-arrows button:hover { border-color: var(--accent); color: var(--accent); }
+.slide__display { font-size: clamp(47px, 9.5vw, 116px); line-height: .94; letter-spacing: -3px; font-weight: 600; text-wrap: balance; }.slide__heading { font-size: clamp(29px, 4.7vw, 48px); line-height: 1.08; letter-spacing: -1.3px; font-weight: 600; text-wrap: balance; }.slide__body { font-size: clamp(16px, 1.9vw, 21px); line-height: 1.48; color: var(--text-dim); }.slide__subtitle, .slide__label, .mono { font-family: var(--font-mono); }.slide__subtitle { font-size: clamp(12px,1.4vw,17px); letter-spacing: .8px; color: var(--text-dim); }.slide__label { font-size: clamp(10px,1.1vw,13px); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; color: var(--accent); margin-bottom: 11px; }.accent { color: var(--accent); }.amber { color: var(--amber); }.coral { color: var(--coral); }.blue { color: var(--blue); }
+.slide__decor { position: absolute; pointer-events: none; z-index: -1; }.grid-bg::before { content:''; position:absolute; inset:0; z-index:-1; opacity:.34; background-image: radial-gradient(circle, var(--border) 1px, transparent 1px); background-size: 28px 28px; pointer-events:none; }
+/* title */
+.slide--title { align-items: flex-start; justify-content: center; background-image: radial-gradient(ellipse at 70% 38%, rgba(85,216,137,.18), transparent 43%), radial-gradient(ellipse at 20% 80%, rgba(242,184,75,.08), transparent 35%); }.slide--title .slide__display { max-width: 900px; }.title-rule { display:flex; align-items:center; gap:12px; margin-bottom:clamp(18px,3vh,32px); }.title-rule i { display:block; width:46px; height:3px; background:var(--accent); }.title-rule span { font: 12px var(--font-mono); letter-spacing:2px; color:var(--text-dim); }.title-sub { margin-top:22px; max-width: 660px; font-size: clamp(16px,2vw,21px); color:var(--text-dim); line-height:1.45; }
+/* divider */
+.slide--divider { justify-content:center; }.slide__number { position:absolute; left:50%; top:50%; transform:translate(-50%,-56%); color:var(--accent); opacity:.07; font: 200 clamp(120px,25vw,280px) var(--font-mono); line-height:.8; }.divider-content { position:relative; }.divider-content::before { content:''; display:block; width:54px; height:3px; margin-bottom:20px; background:var(--accent); }.divider-content .slide__subtitle { margin-top:13px; }
+/* content */
+.slide--content .content-grid { display:grid; grid-template-columns:minmax(0,3fr) minmax(230px,2fr); gap:clamp(28px,5vw,78px); align-items:center; width:100%; }.bullets { list-style:none; margin-top:18px; }.bullets li { position:relative; padding:8px 0 8px 23px; font-size:clamp(16px,1.75vw,21px); line-height:1.42; color:var(--text-dim); }.bullets li::before { content:''; position:absolute; left:0; top:18px; width:7px; height:7px; border-radius:50%; background:var(--accent); }.bullets li strong { color:var(--text); font-weight:600; }.visual-card { min-width:0; border:1px solid var(--border); border-radius:13px; background:rgba(18,26,32,.72); padding:clamp(17px,2.2vw,28px); }.formula { font:clamp(24px,3.4vw,42px) var(--font-mono); color:var(--accent); letter-spacing:-2px; }.formula small { display:block; margin-top:13px; font:12px var(--font-mono); letter-spacing:0; line-height:1.5; color:var(--text-dim); }.mask-strip { display:flex; gap:6px; margin:17px 0 5px; }.mask-strip span { width:30px; height:30px; display:grid; place-items:center; border:1px solid var(--accent); color:var(--accent); border-radius:4px; font:18px var(--font-mono); }.mask-strip span.muted { color:var(--coral); border-color:var(--coral); background:var(--coral-dim); }.stage { width:var(--w); border-left:4px solid var(--c); border-bottom:1px solid var(--border); padding:11px 0 11px 12px; margin:9px 0; }.stage b { display:block; color:var(--c); font:11px var(--font-mono); letter-spacing:1px; }.stage span { display:block; color:var(--text-dim); font-size:13px; margin-top:4px; }
+/* split */
+.slide--split { padding:0; }.split-panels { display:grid; grid-template-columns:3fr 2fr; height:100%; }.split-panel { min-width:0; padding:clamp(38px,6vh,76px) clamp(32px,4.5vw,62px); display:flex; flex-direction:column; justify-content:center; }.split-panel.primary { background:var(--surface); }.split-panel.secondary { background:var(--surface2); }.split-panel h2 { margin-bottom:15px; }.split-panel .bullets { margin-top:4px; }.split-panel .bullets li { font-size:clamp(15px,1.65vw,20px); }.mini-title { font:12px var(--font-mono); text-transform:uppercase; letter-spacing:1.4px; color:var(--text-dim); margin-bottom:12px; }.tag-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }.tag { font:11px var(--font-mono); color:var(--accent); border:1px solid rgba(85,216,137,.3); background:var(--accent-dim); padding:5px 8px; border-radius:5px; }.tag.amber-tag { color:var(--amber); border-color:rgba(242,184,75,.35); background:var(--amber-dim); }.tag.blue-tag { color:var(--blue); border-color:rgba(118,183,232,.35); background:var(--blue-dim); }
+/* dashboard */
+.slide--dashboard .dashboard-head { display:flex; justify-content:space-between; align-items:end; gap:20px; margin-bottom:clamp(18px,3vh,30px); }.slide--dashboard .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }.kpi { min-width:0; min-height:160px; padding:clamp(17px,2.5vh,27px); border:1px solid var(--border); border-radius:12px; background:var(--surface); position:relative; overflow:hidden; }.kpi::after { content:''; position:absolute; right:-35px; bottom:-45px; width:115px; height:115px; border:1px solid var(--border-bright); border-radius:50%; }.kpi-value { font:clamp(32px,5vw,58px) var(--font-mono); letter-spacing:-3px; line-height:1; white-space:nowrap; }.kpi-label { margin-top:13px; font:11px var(--font-mono); letter-spacing:1.1px; text-transform:uppercase; color:var(--text-dim); }.kpi-note { margin-top:7px; font-size:14px; line-height:1.35; color:var(--text-dim); }.bar-chart { display:flex; align-items:end; gap:10px; height:85px; margin-top:18px; }.bar { flex:1; border-radius:4px 4px 0 0; background:var(--accent); min-width:10px; }.bar:nth-child(2) { background:var(--amber); opacity:.85; }.bar-labels { display:flex; justify-content:space-between; font:10px var(--font-mono); color:var(--text-dim); margin-top:7px; }.dashboard-foot { margin-top:18px; color:var(--text-dim); font-size:clamp(14px,1.5vw,17px); }.dashboard-foot strong { color:var(--text); }
+/* diagram */
+.slide--diagram { padding:clamp(24px,4vh,46px) clamp(24px,4vw,60px); }.slide--diagram .slide__heading { margin-bottom:clamp(8px,1.5vh,17px); }.diagram-shell { min-height:0; flex:1; display:flex; }.mermaid-wrap { position:relative; flex:1; min-height:0; display:flex; align-items:center; justify-content:center; overflow:auto; padding:24px; background:var(--surface); border:1px solid var(--border); border-radius:13px; cursor:grab; scrollbar-width:thin; }.mermaid-wrap.is-panning { cursor:grabbing; user-select:none; }.mermaid-viewport { width:100%; height:100%; min-height:300px; display:flex; align-items:center; justify-content:center; overflow:auto; }.mermaid-canvas { margin:auto; transform-origin:center center; }.mermaid-wrap .zoom-controls { position:absolute; top:9px; right:9px; z-index:10; display:flex; gap:2px; padding:2px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; }.zoom-controls button { width:28px; height:28px; border:0; border-radius:4px; background:transparent; color:var(--text-dim); font:14px var(--font-mono); cursor:pointer; }.zoom-controls button:hover { background:var(--border); color:var(--text); }.mermaid .nodeLabel { color:var(--text) !important; font-family:var(--font-body) !important; font-size:18px !important; }.mermaid .edgeLabel { color:var(--text-dim) !important; background:var(--bg) !important; font:13px var(--font-mono) !important; }.mermaid .edgeLabel rect { fill:var(--bg) !important; }.mermaid .node rect,.mermaid .node circle,.mermaid .node polygon { stroke-width:2px; }.mermaid .edge-pattern-solid { stroke-width:2px; }
+/* code */
+.slide--code { align-items:center; }.code-title { text-align:center; }.code-block { width:min(900px,100%); margin-top:22px; padding:clamp(22px,3.5vh,38px) clamp(22px,3vw,40px); position:relative; background:var(--code-bg); border:1px solid var(--border-bright); border-radius:13px; }.code-file { position:absolute; top:-12px; left:25px; padding:4px 11px; border-radius:4px; background:var(--accent); color:var(--bg); font:600 11px var(--font-mono); }.code-block pre { overflow-x:auto; white-space:pre; }.code-block code { color:#d4e4dc; font:clamp(13px,1.45vw,17px)/1.65 var(--font-mono); }.code-block .hl { color:var(--accent); }.code-block .am { color:var(--amber); }.code-block .cm { color:#789188; }.code-caption { width:min(900px,100%); margin-top:15px; color:var(--text-dim); font-size:clamp(14px,1.5vw,18px); text-align:center; }
+/* table */
+.slide--table { padding:clamp(25px,4vh,46px) clamp(24px,4vw,60px); }.table-wrap { flex:1; min-height:0; margin-top:18px; overflow:hidden; border:1px solid var(--border); border-radius:13px; background:var(--surface); }.table-scroll { overflow-x:auto; height:100%; }.data-table { width:100%; border-collapse:collapse; }.data-table th { padding:15px 18px; text-align:left; background:var(--surface2); border-bottom:2px solid var(--border-bright); color:var(--text-dim); font:600 11px var(--font-mono); letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }.data-table td { padding:16px 18px; border-bottom:1px solid var(--border); font-size:clamp(14px,1.45vw,18px); line-height:1.35; vertical-align:top; }.data-table tr:nth-child(even) { background:rgba(25,36,43,.54); }.data-table tr:last-child td { border-bottom:0; }.data-table td:first-child { font-weight:600; color:var(--accent); white-space:nowrap; }
+/* quote */
+.slide--quote { align-items:center; text-align:center; padding:clamp(55px,10vh,120px) clamp(55px,12vw,200px); background-image:radial-gradient(ellipse at 50% 50%, var(--accent-dim), transparent 44%); }.quote-mark { color:var(--accent); opacity:.14; font:clamp(80px,15vw,180px)/.45 Georgia,serif; }.slide--quote blockquote { max-width:930px; font:italic clamp(27px,4.3vw,52px)/1.23 var(--font-body); }.slide--quote cite { margin-top:25px; color:var(--text-dim); font:11px var(--font-mono); letter-spacing:1.4px; text-transform:uppercase; }.concept-tags { margin-top:27px; display:flex; justify-content:center; flex-wrap:wrap; gap:8px; }
+/* bleed */
+.slide--bleed { padding:0; justify-content:flex-end; color:#f4fbf7; }.bleed-bg { position:absolute; inset:0; z-index:0; background:radial-gradient(circle at 72% 32%, rgba(85,216,137,.27), transparent 22%), radial-gradient(circle at 23% 78%, rgba(242,184,75,.15), transparent 26%), linear-gradient(135deg,#101b1a 0%,#081014 55%,#151d19 100%); }.bleed-bg::after { content:''; position:absolute; inset:0; opacity:.28; background-image:linear-gradient(rgba(85,216,137,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(85,216,137,.14) 1px,transparent 1px); background-size:56px 56px; transform:perspective(480px) rotateX(55deg) scale(1.45) translateY(90px); transform-origin:center bottom; }.bleed-scrim { position:absolute; inset:0; z-index:1; background:linear-gradient(to top,rgba(3,8,9,.9),rgba(3,8,9,.13) 64%,transparent); }.bleed-content { position:relative; z-index:2; padding:clamp(40px,6vh,75px) clamp(40px,8vw,118px); max-width:1000px; }.choice-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:26px; }.choice { padding:13px 15px; border:1px solid rgba(210,240,220,.23); border-radius:8px; background:rgba(8,16,17,.55); }.choice b { display:block; color:var(--accent); font:600 14px var(--font-mono); }.choice span { display:block; margin-top:6px; color:rgba(244,251,247,.72); font-size:13px; line-height:1.3; }
+@media (max-height:700px) { .slide { padding:28px clamp(32px,6vw,80px); }.slide__display { font-size:clamp(38px,8vw,78px); }.slide--divider .slide__number { font-size:clamp(90px,18vw,190px); }.kpi { min-height:130px; }.bullets li { padding-top:5px; padding-bottom:5px; }.data-table th,.data-table td { padding-top:10px; padding-bottom:10px; } }
+@media (max-height:560px) { .slide__decor { display:none; }.slide__heading { font-size:clamp(24px,4.4vw,38px); }.slide--dashboard .kpis { gap:9px; }.kpi { min-height:110px; padding:13px; }.kpi-value { font-size:clamp(26px,4vw,42px); }.kpi-label { margin-top:8px; }.kpi-note { font-size:12px; }.deck-dots { display:none; } }
+@media (max-width:800px) { .slide--content .content-grid { grid-template-columns:1fr; }.content-grid .visual-card { display:none; }.split-panels { grid-template-columns:1fr; }.split-panel.secondary { display:none; }.slide--dashboard .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }.choice-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.deck-hints { display:none; } }
+@media (max-width:520px) { .slide { padding-left:24px; padding-right:24px; }.slide--dashboard .dashboard-head { display:block; }.slide--dashboard .dashboard-head .slide__subtitle { margin-top:8px; }.data-table { min-width:740px; }.formula { font-size:25px; } }
+</style>
+</head>
+<body>
+<div class="deck">
+  <!-- surf unavailable; CSS/SVG fallback used for the title and full-bleed visual anchor. -->
+  <!-- 01 TITLE -->
+  <section class="slide slide--title grid-bg">
+    <svg class="slide__decor" style="right:3vw;top:14vh;opacity:.7" width="310" height="310" viewBox="0 0 310 310" aria-hidden="true">
+      <circle cx="155" cy="155" r="116" fill="none" stroke="var(--accent)" stroke-width="1" opacity=".26" stroke-dasharray="3 10"/>
+      <circle cx="155" cy="155" r="73" fill="none" stroke="var(--amber)" stroke-width="1" opacity=".35"/>
+      <path d="M38 155h234M155 38v234" stroke="var(--accent)" opacity=".18"/>
+      <circle cx="155" cy="155" r="9" fill="var(--accent)" opacity=".8"/>
+      <circle cx="73" cy="73" r="5" fill="var(--amber)"/><circle cx="238" cy="234" r="5" fill="var(--coral)"/>
+    </svg>
+    <div class="title-rule reveal"><i></i><span>UNIT 13 · COMPUTER VISION</span></div>
+    <h1 class="slide__display reveal">Ngoài<br><span class="accent">Transformer</span><br>truyền thống</h1>
+    <p class="title-sub reveal">Bốn hướng kiến trúc mới để xử lý chuỗi dài, học representation tốt hơn và giữ vision backbone đơn giản.</p>
+  </section>
+
+  <!-- 02 DIVIDER -->
+  <section class="slide slide--divider">
+    <span class="slide__number">01</span>
+    <div class="divider-content"><p class="slide__label reveal">Bối cảnh</p><h2 class="slide__heading reveal">Attention nhìn được toàn cục.<br>Nhưng cái giá là <span class="coral">L²</span>.</h2><p class="slide__subtitle reveal">Từ patch nhỏ đến video và ảnh độ phân giải cao</p></div>
+  </section>
+
+  <!-- 03 CONTENT -->
+  <section class="slide slide--content">
+    <div class="content-grid">
+      <div><p class="slide__label reveal">Vấn đề cốt lõi</p><h2 class="slide__heading reveal">Số token tăng nhanh hơn trực giác</h2><ul class="bullets"><li class="reveal">Ảnh lớn hơn, patch nhỏ hơn → <strong>nhiều token hơn</strong>.</li><li class="reveal">Video, y tế, vệ tinh, panorama đều tạo sequence rất dài.</li><li class="reveal">Attention cần global context và trộn thông tin theo nội dung ảnh.</li><li class="reveal">Nhưng <strong>QKᵀ</strong> tạo ma trận tương tác giữa mọi cặp token.</li></ul></div>
+      <div class="visual-card reveal"><div class="formula">Cost = O(L²)<small>L = số token<br>Global context + data dependency<br>đổi lấy memory và compute</small></div><div class="tag-row"><span class="tag">high-res</span><span class="tag amber-tag">video</span><span class="tag blue-tag">medical</span></div></div>
+    </div>
+  </section>
+
+  <!-- 04 DASHBOARD -->
+  <section class="slide slide--dashboard">
+    <div class="dashboard-head"><div><p class="slide__label reveal">Token economics</p><h2 class="slide__heading reveal">Từ 196 đến 16.384 token</h2></div><p class="slide__subtitle reveal">cùng là một attention mechanism</p></div>
+    <div class="kpis">
+      <div class="kpi reveal"><div class="kpi-value accent">196</div><div class="kpi-label">224² / patch 16</div><div class="kpi-note">14 × 14 patches</div></div>
+      <div class="kpi reveal"><div class="kpi-value amber">16.384</div><div class="kpi-label">1024² / patch 8</div><div class="kpi-note">128 × 128 patches</div></div>
+      <div class="kpi reveal"><div class="kpi-value coral">268M</div><div class="kpi-label">attention cells</div><div class="kpi-note">16.384 × 16.384</div></div>
+      <div class="kpi reveal"><div class="kpi-value blue">4</div><div class="kpi-label">hướng thay thế</div><div class="kpi-note">operator · SSL · retention · pretraining</div></div>
+    </div>
+    <div class="bar-chart reveal"><span class="bar" style="height:8%"></span><span class="bar" style="height:100%"></span></div><div class="bar-labels reveal"><span>196² ≈ 38K</span><span>16.384² ≈ 268M</span></div>
+  </section>
+
+  <!-- 05 DIVIDER HYENA -->
+  <section class="slide slide--divider" style="background-image:radial-gradient(ellipse at 72% 28%,var(--accent-dim),transparent 45%)"><span class="slide__number">02</span><div class="divider-content"><p class="slide__label reveal">Hướng 01 · Operator</p><h2 class="slide__heading reveal"><span class="accent">Hyena</span><br>Convolution dài thay cho attention</h2><p class="slide__subtitle reveal">Global receptive field · FFT · gating</p></div></section>
+
+  <!-- 06 SPLIT HYENA -->
+  <section class="slide slide--split">
+    <div class="split-panels"><div class="split-panel primary"><p class="mini-title reveal">Self-attention</p><h2 class="slide__heading reveal">Mọi token gặp mọi token</h2><div class="formula reveal" style="color:var(--coral);font-size:clamp(24px,2.8vw,38px)">softmax(QKᵀ/√d)V<small>QKᵀ tạo ma trận tương tác L × L</small></div><ul class="bullets"><li class="reveal">Global receptive field tự nhiên.</li><li class="reveal">Score phụ thuộc input qua Q, K, V.</li><li class="reveal">Chi phí trực tiếp: <strong>O(L²)</strong>.</li></ul></div><div class="split-panel secondary"><p class="mini-title reveal">Hyena</p><h2 class="slide__heading reveal"><span class="accent">Một kernel dài</span><br>+ gating</h2><div class="formula reveal" style="font-size:clamp(25px,3vw,38px)">FFT → O(L log L)</div><ul class="bullets"><li class="reveal">Long convolution nhìn toàn cục.</li><li class="reveal">Implicit filter sinh kernel khi cần.</li><li class="reveal">Element-wise gate tạo data dependency.</li></ul></div></div>
+  </section>
+
+  <!-- 07 DIAGRAM HYENA -->
+  <section class="slide slide--diagram grid-bg"><p class="slide__label reveal">Hyena operator · bậc 2</p><h2 class="slide__heading reveal">Recursive mixing thay cho softmax attention</h2><div class="diagram-shell reveal"><div class="mermaid-wrap"><div class="zoom-controls"><button onclick="zoomDiagram(this,1.2)">+</button><button onclick="zoomDiagram(this,.8)">−</button><button onclick="resetZoom(this)">↺</button><button onclick="openDiagramFullscreen(this)">⛶</button></div><div class="mermaid-viewport"><pre class="mermaid">flowchart TD
+  U["Input u"] --> P["Projection<br/>x₁ · x₂ · x₃"]
+  P --> C1["Long convolution<br/>FFT · h₁"]
+  C1 --> G1["Gate 1<br/>x₂ ⊙ y"]
+  G1 --> C2["Long convolution<br/>FFT · h₂"]
+  C2 --> G2["Gate 2<br/>x₁ ⊙ y"]
+  G2 --> Y["Output y"]
+  classDef input fill:#55d88922,stroke:#55d889
+  classDef op fill:#76b7e822,stroke:#76b7e8
+  classDef gate fill:#f2b84b22,stroke:#f2b84b
+  class U,Y input
+  class P,C1,C2 op
+  class G1,G2 gate</pre></div></div></div></section>
+
+  <!-- 08 CODE HYENA -->
+  <section class="slide slide--code" style="background-image:radial-gradient(ellipse at 50% 84%,var(--accent-dim),transparent 45%)"><p class="slide__label reveal">Pseudo-code · không phải triển khai đầy đủ</p><h2 class="slide__heading code-title reveal">Kernel dài, nhưng không học từng phần tử</h2><div class="code-block reveal"><span class="code-file">hyena_core.py</span><pre><code><span class="cm"># implicit filter: hₜ = γθ(positionₜ)</span>
+pos = torch.linspace(0, 1, L)
+h = <span class="hl">gamma</span>(pos)
+
+<span class="cm"># convolution in Fourier domain</span>
+X = torch.fft.rfft(x)
+H = torch.fft.rfft(h)
+y = torch.fft.irfft(X * H, n=L)
+
+<span class="cm"># data-dependent mixing</span>
+gate = torch.sigmoid(Wg(x))
+<span class="hl">return gate * y</span></code></pre></div><p class="code-caption reveal"><span class="accent">Long convolution</span> tạo global context · <span class="amber">gating</span> tạo data dependency · không có QKᵀ.</p></section>
+
+  <!-- 09 CONTENT HYENA -->
+  <section class="slide slide--content"><div class="content-grid"><div><p class="slide__label reveal">Hyena trong computer vision</p><h2 class="slide__heading reveal">Khi số patch trở thành sequence rất dài</h2><ul class="bullets"><li class="reveal">Có thể thay attention trong <strong>ViT, Swin, DeiT</strong>.</li><li class="reveal">Hợp với high-resolution, patch nhỏ, ảnh y tế, remote sensing và video.</li><li class="reveal">FFT đưa convolution về khoảng <strong>O(L log L)</strong>.</li><li class="reveal">Không softmax, không QKᵀ, không tạo ma trận <strong>L × L</strong>.</li><li class="reveal">Tóm lại: <strong>implicit filter + long convolution + gating</strong>.</li></ul></div><div class="visual-card reveal"><svg viewBox="0 0 300 240" width="100%" aria-label="global receptive field"><g fill="none" stroke="var(--accent)" opacity=".65"><circle cx="150" cy="112" r="31" stroke-width="3"/><circle cx="150" cy="112" r="65" stroke-width="2" opacity=".65"/><circle cx="150" cy="112" r="103" stroke-width="1" opacity=".45" stroke-dasharray="5 8"/></g><g fill="var(--amber)"><circle cx="78" cy="75" r="5"/><circle cx="230" cy="68" r="5"/><circle cx="85" cy="174" r="5"/><circle cx="225" cy="181" r="5"/></g><text x="150" y="117" fill="var(--text)" text-anchor="middle" font-family="var(--font-mono)" font-size="13">one token</text><text x="150" y="220" fill="var(--text-dim)" text-anchor="middle" font-family="var(--font-mono)" font-size="11">global receptive field</text></svg></div></div></section>
+
+  <!-- 10 DIVIDER IJEPA -->
+  <section class="slide slide--divider" style="background-image:radial-gradient(ellipse at 28% 70%,var(--blue-dim),transparent 46%)"><span class="slide__number">03</span><div class="divider-content"><p class="slide__label reveal">Hướng 02 · Self-supervised learning</p><h2 class="slide__heading reveal"><span class="blue">I-JEPA</span><br>Dự đoán embedding, không tái tạo pixel</h2><p class="slide__subtitle reveal">Image-based Joint-Embedding Predictive Architecture</p></div></section>
+
+  <!-- 11 SPLIT IJEPA -->
+  <section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="mini-title reveal">Invariance-based</p><h2 class="slide__heading reveal">Ép các view giống nhau</h2><div class="tag-row reveal"><span class="tag blue-tag">crop</span><span class="tag blue-tag">rotate</span><span class="tag blue-tag">color jitter</span><span class="tag blue-tag">blur</span></div><ul class="bullets"><li class="reveal">Mục tiêu: <strong>f(x₁) ≈ f(x₂)</strong>.</li><li class="reveal">Phụ thuộc augmentation do con người thiết kế.</li><li class="reveal">Có thể làm mất thông tin cần cho counting, depth, spatial task.</li></ul></div><div class="split-panel secondary"><p class="mini-title reveal">Generative · MAE</p><h2 class="slide__heading reveal">Mask rồi reconstruct pixel</h2><div class="mask-strip reveal"><span>▣</span><span class="muted">▧</span><span class="muted">▧</span><span class="muted">▧</span><span>▣</span><span class="muted">▧</span></div><ul class="bullets"><li class="reveal">Thường mask khoảng <strong>75%</strong> patch.</li><li class="reveal">Dễ mở rộng, nhưng pixel loss dễ kéo model về texture thấp cấp.</li></ul></div></div></section>
+
+  <!-- 12 DIAGRAM IJEPA -->
+  <section class="slide slide--diagram" style="background-image:radial-gradient(ellipse at 80% 85%,var(--blue-dim),transparent 48%)"><p class="slide__label reveal">I-JEPA · training flow</p><h2 class="slide__heading reveal">Context thấy một phần — Predictor đoán phần còn lại trong embedding space</h2><div class="diagram-shell reveal"><div class="mermaid-wrap"><div class="zoom-controls"><button onclick="zoomDiagram(this,1.2)">+</button><button onclick="zoomDiagram(this,.8)">−</button><button onclick="resetZoom(this)">↺</button><button onclick="openDiagramFullscreen(this)">⛶</button></div><div class="mermaid-viewport"><pre class="mermaid">flowchart TD
+  C["Context blocks"] --> CE["Context encoder<br/>fθ"]
+  T["Target blocks"] --> TE["Target encoder<br/>fθ̄ · EMA"]
+  CE --> Z["Context embedding zₓ"]
+  Z --> P["Predictor gφ<br/>+ mask tokens + position"]
+  P --> ZH["Predicted target<br/>embedding ẑᵧ"]
+  TE --> ZT["Target embedding zᵧ"]
+  ZH --> L["MSE embedding loss"]
+  ZT --> L
+  classDef data fill:#76b7e822,stroke:#76b7e8
+  classDef enc fill:#55d88922,stroke:#55d889
+  classDef pred fill:#f2b84b22,stroke:#f2b84b
+  class C,T data
+  class CE,TE,Z,ZT enc
+  class P,ZH,L pred</pre></div></div></div></section>
+
+  <!-- 13 CONTENT IJEPA -->
+  <section class="slide slide--content"><div class="content-grid"><div><p class="slide__label reveal">Representation learning</p><h2 class="slide__heading reveal">Abstract prediction giúp model học semantic</h2><ul class="bullets"><li class="reveal">Hai encoder đưa context và target vào cùng embedding space.</li><li class="reveal">Loss: <strong>‖ẑᵧ − zᵧ‖²</strong>, không phải pixel MSE.</li><li class="reveal">Multi-block masking buộc model hiểu ngữ cảnh rộng, không chỉ texture.</li><li class="reveal">Target encoder cập nhật chậm; tránh <strong>representation collapse</strong> với f(x)=c.</li><li class="reveal">Theo tài liệu: pretraining ImageNet dưới <strong>1200 GPU hours</strong>, tốt cho semantic và low-level task.</li></ul></div><div class="visual-card reveal"><div class="mini-title">mask lớn → suy luận cấu trúc</div><svg viewBox="0 0 260 176" width="100%" aria-label="multi block masking"><rect x="22" y="22" width="216" height="132" rx="5" fill="none" stroke="var(--blue)" stroke-width="2"/><g fill="var(--blue-dim)" stroke="var(--blue)" stroke-width="1"><rect x="32" y="32" width="45" height="45"/><rect x="84" y="32" width="45" height="45"/><rect x="136" y="32" width="45" height="45"/></g><g fill="var(--coral-dim)" stroke="var(--coral)" stroke-width="1"><rect x="188" y="32" width="40" height="45"/><rect x="32" y="85" width="45" height="40"/><rect x="84" y="85" width="45" height="40"/><rect x="136" y="85" width="45" height="40"/></g><text x="195" y="112" fill="var(--coral)" font-family="var(--font-mono)" font-size="11">mask</text><text x="30" y="168" fill="var(--text-dim)" font-family="var(--font-mono)" font-size="11">context → target representation</text></svg></div></div></section>
+
+  <!-- 14 CODE IJEPA -->
+  <section class="slide slide--code" style="background-image:radial-gradient(ellipse at 48% 16%,var(--blue-dim),transparent 44%)"><p class="slide__label reveal">Pseudo-code · một training step</p><h2 class="slide__heading code-title reveal">Pixel không nằm trong loss</h2><div class="code-block reveal"><span class="code-file">ijepa_step.py</span><pre><code><span class="hl">context</span>, <span class="am">target</span> = sample_blocks(image)
+
+z_x = context_encoder(context)
+with torch.no_grad():
+    z_y = target_encoder(target)
+
+z_hat = predictor(z_x, target.positions)
+loss = ((z_hat - z_y) ** 2).mean()
+
+<span class="cm"># abstract prediction, not pixel reconstruction</span>
+return loss</code></pre></div><p class="code-caption reveal"><span class="blue">Context</span> → target embedding · multi-block masking → semantic structure.</p></section>
+
+  <!-- 15 DIVIDER RETENTION -->
+  <section class="slide slide--divider" style="background-image:radial-gradient(ellipse at 80% 28%,var(--amber-dim),transparent 48%)"><span class="slide__number">04</span><div class="divider-content"><p class="slide__label reveal">Hướng 03 · Alternative memory</p><h2 class="slide__heading reveal"><span class="amber">Retention</span><br>Một operator, ba cách tính</h2><p class="slide__subtitle reveal">Train song song · inference recurrent · sequence dài theo chunk</p></div></section>
+
+  <!-- 16 DASHBOARD RETENTION -->
+  <section class="slide slide--dashboard"><div class="dashboard-head"><div><p class="slide__label reveal">RetNet → MSR</p><h2 class="slide__heading reveal">Không phải chọn giữa Transformer và RNN</h2></div><p class="slide__subtitle reveal">retention đổi representation theo giai đoạn</p></div><div class="kpis"><div class="kpi reveal"><div class="kpi-value accent">PAR</div><div class="kpi-label">parallel representation</div><div class="kpi-note">Training tận dụng GPU song song</div></div><div class="kpi reveal"><div class="kpi-value amber">REC</div><div class="kpi-label">recurrent representation</div><div class="kpi-note">Inference memory O(1), không KV cache lớn</div></div><div class="kpi reveal"><div class="kpi-value blue">CHUNK</div><div class="kpi-label">chunkwise recurrent</div><div class="kpi-note">Trong chunk song song, giữa chunk recurrent</div></div><div class="kpi reveal"><div class="kpi-value coral">MSR</div><div class="kpi-label">multi-scale retention</div><div class="kpi-note">Mục tiêu: train rẻ + inference rẻ + scale tốt</div></div></div><div class="dashboard-foot reveal"><strong>RetNet</strong> được thiết kế cho language; trong vision, ý tưởng đi tiếp qua <strong>RMT</strong> và <strong>ViR</strong>.</div></section>
+
+  <!-- 17 DIAGRAM RETENTION -->
+  <section class="slide slide--diagram" style="background-image:radial-gradient(ellipse at 24% 20%,var(--amber-dim),transparent 48%)"><p class="slide__label reveal">RetNet → vision</p><h2 class="slide__heading reveal">Hai nhánh đưa retention vào backbone ảnh</h2><div class="diagram-shell reveal"><div class="mermaid-wrap"><div class="zoom-controls"><button onclick="zoomDiagram(this,1.2)">+</button><button onclick="zoomDiagram(this,.8)">−</button><button onclick="resetZoom(this)">↺</button><button onclick="openDiagramFullscreen(this)">⛶</button></div><div class="mermaid-viewport"><pre class="mermaid">flowchart TD
+  R["RetNet / MSR"] --> A["Parallel mode"]
+  R --> B["Recurrent mode"]
+  R --> C["Chunkwise mode"]
+  R --> RMT["RMT<br/>MaSA"]
+  R --> VIR["ViR<br/>Multi-Head Retention"]
+  RMT --> D["MaSAD<br/>horizontal + vertical"]
+  A --> RMT
+  B --> VIR
+  C --> VIR
+  classDef root fill:#f2b84b22,stroke:#f2b84b
+  classDef mode fill:#76b7e822,stroke:#76b7e8
+  classDef vision fill:#55d88922,stroke:#55d889
+  class R root
+  class A,B,C mode
+  class RMT,VIR,D vision</pre></div></div></div></section>
+
+  <!-- 18 SPLIT RETENTION -->
+  <section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="mini-title reveal">RMT · spatial prior</p><h2 class="slide__heading reveal">Manhattan distance làm decay</h2><div class="formula reveal" style="color:var(--amber);font-size:clamp(23px,2.7vw,37px)">d = |i₁−i₂| + |j₁−j₂|</div><ul class="bullets"><li class="reveal">Token gần nhau ảnh hưởng mạnh hơn.</li><li class="reveal">Token xa vẫn tương tác → global receptive field.</li><li class="reveal"><strong>MaSAD</strong> tách trục ngang và dọc để giảm cost.</li><li class="reveal">MaSA dùng cho cả training và inference; throughput/accuracy tốt theo tài liệu.</li></ul></div><div class="split-panel secondary"><p class="mini-title reveal">ViR · retention backbone</p><h2 class="slide__heading reveal">MHA → <span class="accent">Multi-Head Retention</span></h2><ul class="bullets"><li class="reveal">Giữ hình dáng tổng thể của ViT.</li><li class="reveal">Chuyển giữa parallel, recurrent, chunkwise.</li><li class="reveal">Không dùng gating function.</li><li class="reveal">Positional embedding cộng trước khi append <strong>[class]</strong> token.</li></ul><div class="tag-row reveal"><span class="tag">resolution ↑</span><span class="tag blue-tag">memory ↓</span></div></div></div></section>
+
+  <!-- 19 DIVIDER HIERA -->
+  <section class="slide slide--divider" style="background-image:radial-gradient(ellipse at 24% 34%,var(--coral-dim),transparent 45%)"><span class="slide__number">05</span><div class="divider-content"><p class="slide__label reveal">Hướng 04 · Architecture simplification</p><h2 class="slide__heading reveal"><span class="coral">Hiera</span><br>Pretraining tốt để kiến trúc đơn giản</h2><p class="slide__subtitle reveal">Hierarchical Vision Transformer · MViTv2 → Hiera</p></div></section>
+
+  <!-- 20 CONTENT HIERA -->
+  <section class="slide slide--content"><div class="content-grid"><div><p class="slide__label reveal">Từ CNN đến hierarchical ViT</p><h2 class="slide__heading reveal">Spatial reasoning không nhất thiết phải hard-code</h2><ul class="bullets"><li class="reveal"><strong>CNN:</strong> resolution cao → thấp, channel ít → nhiều; học edge, part, object.</li><li class="reveal"><strong>ViT nguyên bản:</strong> patch → token sequence, resolution token gần như cố định.</li><li class="reveal"><strong>MViTv2:</strong> đem multi-scale representation vào Transformer.</li><li class="reveal">Các module vision-specific như convolution, window, relative position giúp ích nhưng làm model chậm, lớn và khó scale.</li></ul></div><div class="visual-card reveal"><div class="mini-title">hierarchical stages</div><div class="stage" style="--w:92%;--c:var(--blue)"><b>EARLY</b><span>high res · low channels</span></div><div class="stage" style="--w:70%;--c:var(--accent)"><b>MIDDLE</b><span>parts · shapes</span></div><div class="stage" style="--w:48%;--c:var(--amber)"><b>LATE</b><span>low res · semantics</span></div></div></div></section>
+
+  <!-- 21 SPLIT HIERA -->
+  <section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="mini-title reveal">Từ MViTv2 → Hiera</p><h2 class="slide__heading reveal">Bỏ bớt thứ không cần thiết</h2><ul class="bullets"><li class="reveal">Relative positional embedding → <strong>absolute</strong> positional embedding.</li><li class="reveal">Loại bỏ convolution.</li><li class="reveal">Max pooling từng được dùng thay conv; pooling stride 1 sau đó cũng được bỏ.</li><li class="reveal">Kết quả: backbone ít module hơn, dễ triển khai hơn.</li></ul></div><div class="split-panel secondary"><p class="mini-title reveal">MAE pretraining</p><h2 class="slide__heading reveal">Objective mạnh thay cho bias thủ công</h2><div class="mask-strip reveal"><span>▣</span><span class="muted">▧</span><span class="muted">▧</span><span class="muted">▧</span><span>▣</span><span class="muted">▧</span><span class="muted">▧</span><span class="muted">▧</span></div><p class="slide__body reveal" style="margin-top:15px">Encoder chỉ thấy patch còn lại; decoder reconstruct patch bị mask. Tài liệu ghi nhận tốc độ tăng khoảng <strong class="accent">22% ảnh</strong> và <strong class="amber">27% video</strong> khi bỏ pooling stride 1.</p></div></div></section>
+
+  <!-- 22 CODE MAE -->
+  <section class="slide slide--code" style="background-image:radial-gradient(ellipse at 55% 82%,var(--coral-dim),transparent 43%)"><p class="slide__label reveal">Pretext task của Hiera</p><h2 class="slide__heading code-title reveal">MAE: encoder học từ phần nhìn thấy</h2><div class="code-block reveal"><span class="code-file">mae_pretrain.py</span><pre><code><span class="cm"># [A B C D E F G H] → mask 75%</span>
+visible = [A, E]
+masked  = [B, C, D, F, G, H]
+
+z = encoder(visible)
+reconstruction = decoder(z, masked.positions)
+loss = mse(reconstruction, masked.pixels)
+
+<span class="cm"># learned spatial structure reduces hand-crafted bias</span>
+return loss</code></pre></div><p class="code-caption reveal">Hiera dựa vào MAE để tự học spatial reasoning — thay vì nhồi thêm module vào architecture.</p></section>
+
+  <!-- 23 TABLE -->
+  <section class="slide slide--table"><p class="slide__label reveal">Synthesis · 4 hướng thay đổi</p><h2 class="slide__heading reveal">Mỗi phương pháp giải một nút thắt khác nhau</h2><div class="table-wrap reveal"><div class="table-scroll"><table class="data-table"><thead><tr><th>Kiến trúc</th><th>Vấn đề</th><th>Kỹ thuật chính</th><th>Điểm mạnh</th></tr></thead><tbody><tr><td>Hyena</td><td>Attention O(L²) quá đắt</td><td>Long convolution + gating</td><td>Sequence dài, memory tốt</td></tr><tr><td>I-JEPA</td><td>Học representation không label</td><td>Predict embedding thay pixel</td><td>Semantic representation tốt</td></tr><tr><td>RetNet / RMT / ViR</td><td>Compute và cache của attention</td><td>Retention + spatial decay</td><td>Train song song, inference tiết kiệm</td></tr><tr><td>Hiera</td><td>ViT vision quá phức tạp</td><td>Đơn giản hóa + MAE</td><td>Nhanh, chính xác, dễ scale</td></tr></tbody></table></div></div></section>
+
+  <!-- 24 QUOTE -->
+  <section class="slide slide--quote"><div class="quote-mark reveal">“</div><blockquote class="reveal">Nếu objective pretraining đủ mạnh, ta không cần nhồi mọi inductive bias vào architecture.</blockquote><cite class="reveal">— Bài học trung tâm của Hiera</cite><div class="concept-tags reveal"><span class="tag">global receptive field</span><span class="tag blue-tag">data dependency</span><span class="tag amber-tag">spatial decay</span><span class="tag blue-tag">abstract prediction</span><span class="tag amber-tag">inductive bias</span></div></section>
+
+  <!-- 25 FULL BLEED -->
+  <section class="slide slide--bleed"><div class="bleed-bg"></div><div class="bleed-scrim"></div><div class="bleed-content"><p class="slide__label reveal" style="color:var(--accent)">Kết luận · chọn theo nút thắt</p><h2 class="slide__heading reveal" style="font-size:clamp(34px,5.8vw,66px)">Không có “Transformer killer”.<br>Chỉ có <span class="accent">operator phù hợp</span>.</h2><div class="choice-grid"><div class="choice reveal"><b>Hyena</b><span>L rất dài, cần global context, memory là bottleneck.</span></div><div class="choice reveal"><b>I-JEPA</b><span>Muốn self-supervised representation, ít phụ thuộc augmentation.</span></div><div class="choice reveal"><b>Retention</b><span>Resolution tăng, cần train song song và inference/cache rẻ.</span></div><div class="choice reveal"><b>Hiera</b><span>Muốn backbone đơn giản, để MAE học spatial reasoning.</span></div></div><p class="slide__subtitle reveal" style="margin-top:25px;color:rgba(244,251,247,.65)">Hyena · I-JEPA · RetNet/RMT/ViR · Hiera</p></div></section>
+</div>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({ startOnLoad:false, theme:'base', look:'classic', securityLevel:'loose', themeVariables:{ primaryColor:isDark?'#19242b':'#e8efeb', primaryBorderColor:isDark?'#55d889':'#137a43', primaryTextColor:isDark?'#eaf2ee':'#15221c', secondaryColor:isDark?'#19242b':'#eef5f0', secondaryBorderColor:isDark?'#76b7e8':'#236c9e', secondaryTextColor:isDark?'#eaf2ee':'#15221c', tertiaryColor:isDark?'#22313a':'#fff3df', tertiaryBorderColor:isDark?'#f2b84b':'#a66800', tertiaryTextColor:isDark?'#eaf2ee':'#15221c', lineColor:isDark?'#9aada5':'#5d7067', fontSize:'18px', fontFamily:'IBM Plex Sans, sans-serif' }});
+  function autoFit(){ document.querySelectorAll('.mermaid svg').forEach(function(svg){ svg.removeAttribute('height'); svg.style.width='100%'; svg.style.maxWidth='100%'; svg.style.height='auto'; }); document.querySelectorAll('.kpi-value').forEach(function(el){ if(el.scrollWidth>el.clientWidth){ el.style.transform='scale('+el.clientWidth/el.scrollWidth+')'; el.style.transformOrigin='left top'; }}); }
+  mermaid.run().then(function(){ autoFit(); new SlideEngine(); }).catch(function(err){ console.error(err); autoFit(); new SlideEngine(); });
+</script>
+<script>
+  var INITIAL_ZOOM=1;
+  function zoomDiagram(btn,f){var w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');var z=parseFloat(t.dataset.zoom||INITIAL_ZOOM);z=Math.min(Math.max(z*f,.55),4);t.dataset.zoom=z;t.style.zoom=z;}
+  function resetZoom(btn){var w=btn.closest('.mermaid-wrap'),t=w.querySelector('.mermaid');t.dataset.zoom=INITIAL_ZOOM;t.style.zoom=INITIAL_ZOOM;}
+  function openDiagramFullscreen(btn){var w=btn.closest('.mermaid-wrap'),svg=w.querySelector('svg');if(!svg)return;var clone=svg.cloneNode(true);clone.style.zoom='';var bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#0b1014';var html='<!doctype html><html><head><meta charset="utf-8"><title>Diagram</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:'+bg+';padding:40px;box-sizing:border-box}svg{max-width:100%;max-height:90vh;height:auto}</style></head><body>'+clone.outerHTML+'</body></html>';window.open('data:text/html;charset=utf-8,'+encodeURIComponent(html),'_blank');}
+  document.querySelectorAll('.mermaid-wrap').forEach(function(w){w.addEventListener('wheel',function(e){if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();var t=w.querySelector('.mermaid'),z=parseFloat(t.dataset.zoom||1);z=Math.min(Math.max(z*(e.deltaY<0?1.1:.9),.55),4);t.dataset.zoom=z;t.style.zoom=z;},{passive:false});var sx,sy,sl,st,pan=false;w.addEventListener('mousedown',function(e){if(e.target.closest('.zoom-controls'))return;pan=true;sx=e.clientX;sy=e.clientY;sl=w.scrollLeft;st=w.scrollTop;w.classList.add('is-panning');});window.addEventListener('mousemove',function(e){if(!pan)return;w.scrollLeft=sl-(e.clientX-sx);w.scrollTop=st-(e.clientY-sy);});window.addEventListener('mouseup',function(){pan=false;w.classList.remove('is-panning');});});
+  function SlideEngine(){this.deck=document.querySelector('.deck');this.slides=[].slice.call(document.querySelectorAll('.slide'));this.current=0;this.total=this.slides.length;this.buildChrome();this.bindEvents();this.observe();this.update();}
+  SlideEngine.prototype.buildChrome=function(){var self=this,bar=document.createElement('div');bar.className='deck-progress';document.body.appendChild(bar);this.bar=bar;var dots=document.createElement('div');dots.className='deck-dots';this.slides.forEach(function(_,i){var d=document.createElement('button');d.className='deck-dot';d.title='Slide '+(i+1);d.setAttribute('aria-label','Ga tới slide '+(i+1));d.onclick=function(){self.goTo(i)};dots.appendChild(d)});document.body.appendChild(dots);this.dots=[].slice.call(dots.children);var ctr=document.createElement('div');ctr.className='deck-counter';document.body.appendChild(ctr);this.counter=ctr;var hints=document.createElement('div');hints.className='deck-hints';hints.textContent='← → / Space / scroll để điều hướng';document.body.appendChild(hints);this.hints=hints;this.hintTimer=setTimeout(function(){hints.classList.add('faded')},4500);var arrows=document.createElement('div');arrows.className='deck-arrows';var prev=document.createElement('button');prev.innerHTML='‹';prev.title='Slide trước';prev.setAttribute('aria-label','Slide trước');prev.onclick=function(){self.prev()};var next=document.createElement('button');next.innerHTML='›';next.title='Slide tiếp';next.setAttribute('aria-label','Slide tiếp');next.onclick=function(){self.next()};arrows.append(prev,next);document.body.appendChild(arrows);};
+  SlideEngine.prototype.bindEvents=function(){var self=this;document.addEventListener('keydown',function(e){if(e.target.closest('.mermaid-wrap,.table-scroll,.code-block,input,textarea,[contenteditable]'))return;if(['ArrowDown','ArrowRight',' ','PageDown'].indexOf(e.key)>-1){e.preventDefault();self.next()}else if(['ArrowUp','ArrowLeft','PageUp'].indexOf(e.key)>-1){e.preventDefault();self.prev()}else if(e.key==='Home'){e.preventDefault();self.goTo(0)}else if(e.key==='End'){e.preventDefault();self.goTo(self.total-1)}self.fadeHints()});var ty;this.deck.addEventListener('touchstart',function(e){ty=e.touches[0].clientY},{passive:true});this.deck.addEventListener('touchend',function(e){var dy=ty-e.changedTouches[0].clientY;if(Math.abs(dy)>50){dy>0?self.next():self.prev()}});};
+  SlideEngine.prototype.observe=function(){var self=this;var obs=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting){entry.target.classList.add('visible');self.current=self.slides.indexOf(entry.target);self.update()}})},{threshold:.5});this.slides.forEach(function(s){obs.observe(s)});};
+  SlideEngine.prototype.goTo=function(i){this.slides[Math.max(0,Math.min(i,this.total-1))].scrollIntoView({behavior:'smooth'});};SlideEngine.prototype.next=function(){if(this.current<this.total-1)this.goTo(this.current+1)};SlideEngine.prototype.prev=function(){if(this.current>0)this.goTo(this.current-1)};SlideEngine.prototype.update=function(){this.bar.style.width=((this.current+1)/this.total*100)+'%';var c=this.current;this.dots.forEach(function(d,i){d.classList.toggle('active',i===c)});this.counter.textContent=(this.current+1)+' / '+this.total;};SlideEngine.prototype.fadeHints=function(){clearTimeout(this.hintTimer);this.hints.classList.add('faded');};
+</script>
+</body>
+</html>

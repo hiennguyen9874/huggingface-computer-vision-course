@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit 07 — Video Processing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --bg: #0b1117;
+  --surface: #121b24;
+  --surface-2: #182631;
+  --surface-3: #213541;
+  --border: rgba(205, 224, 229, .13);
+  --border-strong: rgba(205, 224, 229, .24);
+  --text: #e8f0ef;
+  --muted: #9bb0b4;
+  --faint: #5d747a;
+  --amber: #e6b85c;
+  --amber-dim: rgba(230, 184, 92, .12);
+  --teal: #55c7b3;
+  --teal-dim: rgba(85, 199, 179, .12);
+  --coral: #f07f72;
+  --coral-dim: rgba(240, 127, 114, .12);
+  --blue: #73a9dd;
+  --blue-dim: rgba(115, 169, 221, .12);
+  --green: #8fd18a;
+  --code: #071016;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f5f1e9; --surface: #fffdf8; --surface-2: #eee8dd; --surface-3: #e3ddd1;
+    --border: rgba(27, 42, 45, .12); --border-strong: rgba(27, 42, 45, .24);
+    --text: #1b2b2e; --muted: #5e7172; --faint: #8a9896;
+    --amber: #a86f16; --amber-dim: rgba(168,111,22,.11); --teal: #147d71; --teal-dim: rgba(20,125,113,.11);
+    --coral: #bd5144; --coral-dim: rgba(189,81,68,.1); --blue: #32699e; --blue-dim: rgba(50,105,158,.11);
+    --green: #3c843e; --code: #172328;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); overflow-wrap: break-word; }
+body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .4; background-image: radial-gradient(circle, var(--border) 1px, transparent 1px); background-size: 32px 32px; }
+.deck { height: 100dvh; overflow-y: auto; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+.slide { height: 100dvh; min-height: 100dvh; scroll-snap-align: start; overflow: hidden; position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: center; padding: clamp(38px, 6vh, 78px) clamp(38px, 8vw, 120px); opacity: 0; transform: translateY(26px) scale(.985); transition: opacity .55s ease, transform .55s cubic-bezier(.16,1,.3,1); }
+.slide.visible { opacity: 1; transform: none; }
+.slide .reveal { opacity: 0; transform: translateY(16px); transition: opacity .45s ease, transform .45s cubic-bezier(.16,1,.3,1); }
+.slide.visible .reveal { opacity: 1; transform: none; }
+.slide.visible .reveal:nth-child(1) { transition-delay: .08s; }.slide.visible .reveal:nth-child(2) { transition-delay: .16s; }.slide.visible .reveal:nth-child(3) { transition-delay: .24s; }.slide.visible .reveal:nth-child(4) { transition-delay: .32s; }.slide.visible .reveal:nth-child(5) { transition-delay: .4s; }.slide.visible .reveal:nth-child(6) { transition-delay: .48s; }
+@media (prefers-reduced-motion: reduce) { .slide, .slide .reveal { opacity: 1 !important; transform: none !important; transition: none !important; } }
+.slide::after { content: ''; position: absolute; width: 42vw; height: 42vw; border-radius: 50%; filter: blur(70px); opacity: .08; pointer-events: none; z-index: -1; background: var(--teal); top: -18vw; right: -12vw; }
+.slide:nth-child(3n)::after { background: var(--amber); left: -14vw; right: auto; top: auto; bottom: -20vw; }
+.slide:nth-child(4n)::after { background: var(--coral); top: 40%; right: -22vw; }
+.slide__display { font-family: var(--font-display); font-weight: 400; font-size: clamp(58px, 11vw, 142px); line-height: .9; letter-spacing: -2px; text-wrap: balance; }
+.slide__heading { font-family: var(--font-display); font-size: clamp(34px, 5vw, 64px); font-weight: 400; line-height: 1.04; letter-spacing: -.7px; text-wrap: balance; }
+.slide__body { font-size: clamp(17px, 1.8vw, 24px); line-height: 1.5; color: var(--muted); text-wrap: pretty; }
+.eyebrow, .slide__label, .slide__subtitle { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1.5px; font-size: clamp(10px, 1.1vw, 14px); color: var(--amber); }
+.eyebrow { margin-bottom: 15px; }
+.slide__subtitle { color: var(--muted); margin-top: 18px; }
+.muted { color: var(--muted); }.amber { color: var(--amber); }.teal { color: var(--teal); }.coral { color: var(--coral); }.blue { color: var(--blue); }.green { color: var(--green); }
+.corner { position: absolute; pointer-events: none; opacity: .45; }
+.corner--tr { top: 0; right: 0; }.corner--bl { bottom: 0; left: 0; transform: rotate(180deg); }
+
+/* Navigation chrome */
+.deck-progress { position: fixed; z-index: 100; left: 0; top: 0; height: 3px; background: var(--amber); width: 0; transition: width .3s ease; }
+.deck-dots { position: fixed; z-index: 100; right: 18px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 7px; padding: 9px 7px; border: 1px solid var(--border); border-radius: 20px; background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(8px); }
+.deck-dot { width: 7px; height: 7px; border: 0; border-radius: 50%; padding: 0; cursor: pointer; background: var(--muted); opacity: .35; transition: .2s ease; }.deck-dot:hover { opacity: .75; }.deck-dot.active { background: var(--amber); opacity: 1; transform: scale(1.5); }
+.deck-counter { position: fixed; z-index: 100; right: 20px; bottom: 18px; font: 12px var(--font-mono); color: var(--muted); text-shadow: 0 1px 3px #000; }
+.deck-hints { position: fixed; z-index: 100; left: 50%; bottom: 18px; transform: translateX(-50%); font: 11px var(--font-mono); color: var(--muted); opacity: .65; transition: opacity .4s; white-space: nowrap; }.deck-hints.faded { opacity: 0; }
+.deck-nav { position: fixed; z-index: 100; left: 20px; bottom: 14px; display: flex; gap: 5px; }.deck-nav button { width: 32px; height: 28px; border: 1px solid var(--border-strong); border-radius: 6px; background: color-mix(in srgb, var(--surface) 76%, transparent); color: var(--muted); cursor: pointer; font: 14px var(--font-mono); backdrop-filter: blur(8px); }.deck-nav button:hover { color: var(--text); border-color: var(--amber); }
+
+/* Shared visual components */
+.bullets { list-style: none; margin-top: 24px; }.bullets li { position: relative; padding: 9px 0 9px 23px; color: var(--muted); font-size: clamp(17px, 1.75vw, 23px); line-height: 1.42; }.bullets li::before { content: ''; position: absolute; left: 0; top: 20px; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }.bullets.teal-list li::before { background: var(--teal); }
+.content-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(230px, 2fr); gap: clamp(28px, 6vw, 90px); align-items: center; width: 100%; }.content-grid.right-heavy { grid-template-columns: minmax(230px, 2fr) minmax(0, 3fr); }
+.card { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: clamp(16px, 2.5vh, 28px); }.card h3 { font-family: var(--font-display); font-size: clamp(25px, 3vw, 40px); font-weight: 400; margin-bottom: 9px; }.card p { color: var(--muted); line-height: 1.45; font-size: clamp(14px, 1.35vw, 18px); }.card small { display: block; color: var(--faint); font: 11px var(--font-mono); text-transform: uppercase; letter-spacing: 1px; margin-top: 12px; }.card--amber { border-top: 3px solid var(--amber); }.card--teal { border-top: 3px solid var(--teal); }.card--coral { border-top: 3px solid var(--coral); }.card--blue { border-top: 3px solid var(--blue); }
+.flow { display: flex; align-items: stretch; justify-content: center; gap: 0; width: 100%; margin-top: 30px; }.flow-step { flex: 1; min-width: 0; padding: clamp(14px, 2.8vh, 30px) clamp(12px, 1.6vw, 24px); background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--amber); border-radius: 10px; }.flow-step:nth-child(3n) { border-top-color: var(--teal); }.flow-step:nth-child(5n) { border-top-color: var(--coral); }.flow-step strong { display: block; font-family: var(--font-display); font-size: clamp(22px, 2.5vw, 36px); font-weight: 400; margin: 8px 0; }.flow-step p { color: var(--muted); font-size: clamp(13px, 1.3vw, 17px); line-height: 1.4; }.flow-num { font: 11px var(--font-mono); color: var(--amber); }.flow-arrow { display: flex; align-items: center; padding: 0 9px; color: var(--amber); font: 24px var(--font-mono); }
+.chip { display: inline-block; padding: 5px 9px; border-radius: 5px; background: var(--amber-dim); color: var(--amber); font: 12px var(--font-mono); margin: 3px; }.chip.teal-chip { background: var(--teal-dim); color: var(--teal); }.chip.coral-chip { background: var(--coral-dim); color: var(--coral); }.chip.blue-chip { background: var(--blue-dim); color: var(--blue); }
+
+/* Slide types */
+.slide--title { align-items: center; text-align: center; background: radial-gradient(ellipse at 50% 35%, var(--teal-dim), transparent 48%); }.slide--title .slide__display { color: var(--teal); max-width: 1000px; }.title-mark { width: min(60vw, 520px); margin: 35px auto 0; opacity: .8; }
+.slide--divider { justify-content: center; }.slide__number { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -55%); font: 200 clamp(130px, 25vw, 300px) var(--font-display); color: var(--amber); opacity: .07; line-height: .8; }.slide--divider .slide__heading, .slide--divider .slide__subtitle { position: relative; z-index: 1; }
+.slide--split { padding: 0; }.split-panels { display: grid; grid-template-columns: 3fr 2fr; height: 100%; }.split-panel { display: flex; flex-direction: column; justify-content: center; padding: clamp(34px, 6vh, 76px) clamp(32px, 5vw, 76px); min-width: 0; }.split-panel.primary { background: var(--surface); }.split-panel.secondary { background: var(--surface-2); }
+.slide--dashboard .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-top: 30px; }.metric { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: clamp(18px, 3vh, 30px) 20px; min-width: 0; }.metric__value { font: clamp(39px, 6vw, 76px) var(--font-display); line-height: .9; white-space: nowrap; }.metric__label { margin-top: 15px; color: var(--muted); font: 11px var(--font-mono); text-transform: uppercase; letter-spacing: 1.3px; }.metric__note { color: var(--faint); font-size: 13px; margin-top: 7px; line-height: 1.3; }
+.slide--diagram { padding: clamp(28px, 4vh, 48px) clamp(28px, 5vw, 72px); }.diagram-shell { flex: 1; min-height: 0; margin-top: 18px; background: color-mix(in srgb, var(--surface) 80%, transparent); border: 1px solid var(--border); border-radius: 15px; position: relative; display: flex; align-items: center; justify-content: center; padding: clamp(20px, 4vw, 60px); }.diagram-caption { position: absolute; left: 24px; bottom: 18px; font: 11px var(--font-mono); color: var(--faint); }.diagram-caption b { color: var(--teal); }.diagram-controls { position: absolute; right: 16px; top: 14px; display: flex; gap: 4px; }.diagram-controls button { border: 1px solid var(--border); border-radius: 4px; color: var(--muted); background: var(--surface-2); font: 12px var(--font-mono); padding: 5px 8px; }
+.video-tensor { display: flex; align-items: center; gap: clamp(12px, 2vw, 30px); }.tensor-box { padding: clamp(18px, 3vw, 42px); border: 2px solid var(--teal); background: var(--teal-dim); border-radius: 12px; text-align: center; }.tensor-box strong { display: block; font: clamp(27px, 4vw, 58px) var(--font-mono); color: var(--teal); }.tensor-box span { color: var(--muted); font: 12px var(--font-mono); }.tensor-arrow { color: var(--amber); font: 30px var(--font-mono); }.frame-stack { display: flex; align-items: flex-end; gap: 6px; height: 145px; }.frame { width: 32px; height: 100px; border: 2px solid var(--amber); background: linear-gradient(160deg, var(--amber-dim), transparent); transform: skewY(-12deg); }.frame:nth-child(2) { height: 122px; }.frame:nth-child(3) { height: 142px; }.frame:nth-child(4) { height: 112px; }.frame:nth-child(5) { height: 132px; }.frame-label { position: absolute; margin-top: 165px; color: var(--muted); font: 12px var(--font-mono); }
+.token-strip { width: 100%; display: grid; gap: 18px; }.token-row { display: grid; grid-template-columns: 150px 1fr 95px; align-items: center; gap: 16px; }.token-row label { color: var(--muted); font: 12px var(--font-mono); text-transform: uppercase; }.token-track { height: 28px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }.token-fill { height: 100%; background: var(--amber); border-radius: 4px; }.token-row:nth-child(2) .token-fill { background: var(--teal); width: 50%; }.token-row:nth-child(3) .token-fill { background: var(--coral); width: 100%; }.token-row:nth-child(1) .token-fill { width: 6.25%; min-width: 30px; }.token-value { text-align: right; color: var(--text); font: 13px var(--font-mono); }
+.attention-grid { width: min(100%, 850px); display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; aspect-ratio: 1.65; }.attention-grid span { background: var(--teal-dim); border: 1px solid rgba(85,199,179,.25); }.attention-grid span:nth-child(3n+1) { background: var(--amber-dim); }.attention-grid span:nth-child(5n) { background: var(--coral-dim); }.attention-label { position: absolute; right: 40px; bottom: 35px; max-width: 260px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+.code-card { width: min(100%, 920px); background: var(--code); border: 1px solid var(--border); border-radius: 12px; padding: clamp(22px, 4vh, 42px) clamp(22px, 4vw, 45px); position: relative; }.file-tag { position: absolute; top: -12px; left: 24px; background: var(--amber); color: #172016; border-radius: 4px; padding: 4px 11px; font: 11px var(--font-mono); font-weight: 700; }.code-card pre { white-space: pre-wrap; color: #c6d5d4; font: clamp(13px, 1.5vw, 18px)/1.65 var(--font-mono); overflow-wrap: anywhere; }.kw { color: var(--amber); }.fn { color: var(--teal); }.cm { color: #668084; }.num { color: var(--coral); }
+.slide--table { padding: clamp(26px, 4vh, 48px) clamp(26px, 5vw, 72px); }.table-wrap { flex: 1; min-height: 0; margin-top: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }.table-scroll { overflow-x: auto; height: 100%; }.data-table { width: 100%; border-collapse: collapse; font-size: clamp(14px, 1.45vw, 19px); }.data-table th { padding: 15px 18px; text-align: left; color: var(--muted); background: var(--surface-2); border-bottom: 2px solid var(--border-strong); font: 11px var(--font-mono); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }.data-table td { padding: 14px 18px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.35; }.data-table tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 48%, transparent); }.data-table tr:last-child td { border-bottom: 0; }.data-table code { color: var(--amber); font: .8em var(--font-mono); }.status { font: 11px var(--font-mono); padding: 4px 8px; border-radius: 4px; white-space: nowrap; }.status.good { color: var(--green); background: color-mix(in srgb, var(--green) 13%, transparent); }.status.warn { color: var(--amber); background: var(--amber-dim); }.status.cost { color: var(--coral); background: var(--coral-dim); }
+.slide--quote { align-items: center; text-align: center; padding-left: 14vw; padding-right: 14vw; background: radial-gradient(ellipse at 50% 50%, var(--amber-dim), transparent 40%); }.quote-mark { font: 150px/0.5 Georgia, serif; color: var(--amber); opacity: .18; }.slide--quote blockquote { max-width: 1000px; font: italic clamp(31px, 5vw, 68px)/1.18 var(--font-display); }.slide--quote cite { margin-top: 24px; color: var(--muted); font: 12px var(--font-mono); text-transform: uppercase; letter-spacing: 1.5px; }
+.slide--bleed { padding: 0; justify-content: flex-end; color: #f7fbfa; }.bleed-bg { position: absolute; inset: 0; background: radial-gradient(circle at 75% 30%, rgba(85,199,179,.52), transparent 25%), linear-gradient(135deg, #071319, #102d34 48%, #6e4b25); z-index: -2; }.bleed-grid { position: absolute; inset: 0; opacity: .28; background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px); background-size: 54px 54px; transform: perspective(500px) rotateX(54deg) scale(1.4); transform-origin: bottom; z-index: -1; }.bleed-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(3,10,12,.92), transparent 65%); z-index: -1; }.bleed-content { padding: clamp(40px, 7vh, 90px) clamp(40px, 8vw, 120px); max-width: 1000px; }.bleed-content .slide__heading { font-size: clamp(45px, 8vw, 100px); }
+
+/* Concept cards */
+.concept-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin-top: 24px; }.concept-grid .card { min-height: 155px; }.concept-grid .card h3 { font-size: clamp(23px, 2.7vw, 35px); }.model-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; width: 100%; margin-top: 25px; }.model-grid .card { min-height: 170px; }.model-grid h3 { font-size: clamp(22px, 2.5vw, 34px); }.model-grid p { font-size: clamp(13px, 1.2vw, 16px); }.orbit { position: relative; width: min(65vw, 620px); aspect-ratio: 1; border: 1px solid var(--border-strong); border-radius: 50%; }.orbit::before, .orbit::after { content: ''; position: absolute; inset: 15%; border: 1px dashed var(--border-strong); border-radius: 50%; }.orbit::after { inset: 32%; border-style: solid; border-color: var(--teal); opacity: .45; }.orbit-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 130px; height: 130px; display: grid; place-items: center; text-align: center; border-radius: 50%; border: 2px solid var(--amber); background: var(--amber-dim); font: 14px var(--font-mono); color: var(--amber); }.orbit-item { position: absolute; width: 105px; padding: 9px 5px; border: 1px solid var(--border-strong); background: var(--surface); border-radius: 7px; text-align: center; font: 11px/1.25 var(--font-mono); color: var(--muted); }.orbit-item:nth-child(2) { top: -16px; left: 50%; transform: translateX(-50%); }.orbit-item:nth-child(3) { top: 20%; right: -34px; }.orbit-item:nth-child(4) { bottom: 5%; right: 5%; }.orbit-item:nth-child(5) { bottom: 5%; left: 5%; }.orbit-item:nth-child(6) { top: 20%; left: -34px; }
+
+@media (max-height: 700px) { .slide { padding: 30px clamp(32px, 6vw, 80px); }.slide__display { font-size: clamp(46px, 9vw, 90px); }.slide__heading { font-size: clamp(29px, 4.5vw, 48px); }.bullets { margin-top: 12px; }.bullets li { padding: 5px 0 5px 20px; font-size: clamp(15px, 1.6vw, 19px); }.card { padding: 14px 18px; }.card h3 { font-size: 26px; }.metric { padding: 16px; }.metric__value { font-size: clamp(35px, 5vw, 58px); }.model-grid .card { min-height: 145px; }.concept-grid .card { min-height: 125px; }.code-card { padding: 20px 28px; }.code-card pre { font-size: 13px; line-height: 1.45; } }
+@media (max-height: 560px) { .deck-dots { display: none; }.slide { padding: 20px 32px; }.slide__subtitle { margin-top: 9px; }.slide::after { display: none; }.diagram-caption { display: none; }.flow { margin-top: 12px; }.flow-step { padding: 11px; }.flow-step strong { font-size: 22px; }.flow-step p { font-size: 12px; }.metric-grid { margin-top: 14px !important; }.metric { padding: 12px; }.metric__label { margin-top: 8px; }.model-grid, .concept-grid { margin-top: 12px; gap: 8px; }.model-grid .card, .concept-grid .card { min-height: 100px; padding: 10px; }.model-grid h3, .concept-grid .card h3 { font-size: 20px; }.model-grid p, .concept-grid .card p { font-size: 11px; }.table-wrap { margin-top: 10px; }.data-table th, .data-table td { padding: 8px 11px; } }
+@media (max-width: 800px) { .content-grid, .content-grid.right-heavy { grid-template-columns: 1fr; }.content-grid > .visual-aside { display: none; }.split-panels { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }.slide--dashboard .metric-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }.concept-grid, .model-grid { grid-template-columns: 1fr; }.concept-grid .card, .model-grid .card { min-height: auto; }.flow { flex-direction: column; gap: 8px; }.flow-arrow { justify-content: center; transform: rotate(90deg); }.video-tensor { transform: scale(.82); }.attention-label { display: none; }.orbit { width: min(78vw, 480px); } }
+</style>
+</head>
+<body>
+<!-- surf unavailable in this environment; CSS gradients and inline SVG supply the visual treatment. -->
+<div class="deck">
+
+<!-- 01: Title -->
+<section class="slide slide--title">
+  <svg class="corner corner--tr" width="150" height="150" viewBox="0 0 150 150"><path d="M150 0v48M100 0h50M0 150h48M0 102v48" fill="none" stroke="var(--teal)" stroke-width="2"/><circle cx="113" cy="36" r="4" fill="var(--amber)"/></svg>
+  <div class="reveal"><p class="eyebrow">Unit 07 · Computer Vision</p></div>
+  <h1 class="slide__display reveal">Video<br><i>Processing</i></h1>
+  <p class="slide__subtitle reveal">Từ chuỗi frame đến video-language intelligence</p>
+  <svg class="title-mark reveal" viewBox="0 0 520 80" fill="none"><path d="M10 40h100M135 40h90M260 40h80M380 40h130" stroke="var(--teal)" stroke-width="2" stroke-dasharray="5 7"/><rect x="112" y="25" width="30" height="30" rx="3" transform="rotate(45 112 25)" stroke="var(--amber)"/><rect x="225" y="25" width="30" height="30" rx="3" transform="rotate(45 225 25)" stroke="var(--coral)"/><rect x="340" y="25" width="30" height="30" rx="3" transform="rotate(45 340 25)" stroke="var(--teal)"/></svg>
+</section>
+
+<!-- 02: Divider -->
+<section class="slide slide--divider"><span class="slide__number">01</span><div><p class="eyebrow reveal">Start with the signal</p><h2 class="slide__heading reveal">Một video là gì?</h2><p class="slide__subtitle reveal">Không chỉ là ảnh. Đó là ảnh + thời gian.</p></div></section>
+
+<!-- 03: Content -->
+<section class="slide slide--content"><div class="content-grid"><div><p class="eyebrow reveal">01 / Representation</p><h2 class="slide__heading reveal">Video = một tensor 4 chiều</h2><ul class="bullets"><li class="reveal">Video là chuỗi các ảnh tĩnh, gọi là <b class="teal">frames</b>, hiển thị liên tiếp.</li><li class="reveal">Ảnh có dạng <code>Height × Width × Channels</code>.</li><li class="reveal">Video thêm chiều thời gian: <code>Time × Height × Width × Channels</code>.</li><li class="reveal">Ví dụ: <b class="amber">16 × 224 × 224 × 3</b> là 16 frame RGB.</li></ul></div><div class="visual-aside reveal"><div class="video-tensor"><div class="frame-stack"><i class="frame"></i><i class="frame"></i><i class="frame"></i><i class="frame"></i><i class="frame"></i><span class="frame-label">T frames</span></div><span class="tensor-arrow">→</span><div class="tensor-box"><strong>T×H×W×C</strong><span>spatio-temporal signal</span></div></div></div></div></section>
+
+<!-- 04: Dashboard -->
+<section class="slide slide--dashboard"><p class="eyebrow reveal">02 / Four knobs</p><h2 class="slide__heading reveal">Bốn thuộc tính quyết định chi phí</h2><div class="metric-grid"><div class="metric reveal"><div class="metric__value amber">4K</div><div class="metric__label">Resolution</div><div class="metric__note">Nhiều chi tiết hơn · nhiều VRAM hơn</div></div><div class="metric reveal"><div class="metric__value teal">60</div><div class="metric__label">fps</div><div class="metric__note">Mượt hơn · gấp đôi frame so với 30 fps</div></div><div class="metric reveal"><div class="metric__value coral">Mbps</div><div class="metric__label">Bitrate</div><div class="metric__note">Chất lượng ↔ bandwidth ↔ storage</div></div><div class="metric reveal"><div class="metric__value blue">H.264</div><div class="metric__label">Codec</div><div class="metric__note">Cơ chế nén và giải nén</div></div></div><p class="slide__body reveal" style="margin-top:25px;max-width:760px">Resolution và frame rate tăng thì chất lượng tăng, nhưng pipeline inference/training cũng nặng hơn. Lossy codec thường là lựa chọn thực tế.</p></section>
+
+<!-- 05: Split -->
+<section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="eyebrow reveal">Spatial</p><h2 class="slide__heading reveal">Image</h2><p class="slide__body reveal" style="margin-top:18px">Một frame cho biết vật thể, màu sắc và bố cục <b class="amber">ở đâu</b>.</p><div class="card card--amber reveal" style="margin-top:26px"><p><b>Spatial information</b><br>appearance · shape · context</p></div></div><div class="split-panel secondary"><p class="eyebrow teal reveal">Spatial + Temporal</p><h2 class="slide__heading reveal">Video</h2><p class="slide__body reveal" style="margin-top:18px">Nhiều frame cho biết vật thể <b class="teal">thay đổi thế nào</b> theo thời gian.</p><div class="card card--teal reveal" style="margin-top:26px"><p><b>Temporal information</b><br>motion · order · action</p></div></div></div></section>
+
+<!-- 06: Diagram -->
+<section class="slide slide--diagram"><p class="eyebrow reveal">03 / Why video is expensive</p><h2 class="slide__heading reveal">Thời gian nhân bản dữ liệu</h2><div class="diagram-shell reveal"><div class="diagram-controls"><button>×1</button><button>⌁ timeline</button></div><div class="flow" style="margin:0;align-items:center"><div class="flow-step" style="border-top-color:var(--amber);text-align:center"><span class="flow-num">IMAGE</span><strong>224×224×3</strong><p>Một frame · spatial only</p></div><div class="flow-arrow">→</div><div class="flow-step" style="border-top-color:var(--coral);text-align:center"><span class="flow-num coral">VIDEO</span><strong>32×224×224×3</strong><p>32 frame · spatio-temporal</p></div><div class="flow-arrow">→</div><div class="flow-step" style="border-top-color:var(--teal);text-align:center"><span class="flow-num teal">MODEL</span><strong>sample</strong><p>Không xử lý toàn bộ frame</p></div></div><div class="diagram-caption"><b>Thách thức:</b> compute lớn · storage lớn · privacy & ethics</div></div></section>
+
+<!-- 07: Divider -->
+<section class="slide slide--divider"><span class="slide__number">02</span><div><p class="eyebrow reveal">Tokenization</p><h2 class="slide__heading reveal">Đưa video vào Transformer</h2><p class="slide__subtitle reveal">Chọn frame hay gom tubelet?</p></div></section>
+
+<!-- 08: Split -->
+<section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="eyebrow amber reveal">Method A</p><h2 class="slide__heading reveal">Uniform<br>Frame Sampling</h2><p class="slide__body reveal" style="margin-top:16px">Chọn đều <b class="amber">N<sub>t</sub></b> frame, rồi xử lý từng frame như ảnh ViT.</p><div class="token-strip reveal" style="margin-top:25px"><div class="token-row"><label>100 frames</label><div class="token-track"><div class="token-fill" style="width:100%"></div></div><span class="token-value">video</span></div><div class="token-row"><label>sample 8</label><div class="token-track"><div class="token-fill" style="width:8%"></div></div><span class="token-value">đại diện</span></div></div></div><div class="split-panel secondary"><p class="eyebrow teal reveal">Method B</p><h2 class="slide__heading reveal">Tubelet<br>Embedding</h2><p class="slide__body reveal" style="margin-top:16px">Gom một khối <b class="teal">time × height × width</b> thành token 3D.</p><div class="card card--teal reveal" style="margin-top:25px"><p><b>2 × 16 × 16</b><br>vừa chứa texture, vừa chứa chuyển động cục bộ.</p></div></div></div></section>
+
+<!-- 09: Code -->
+<section class="slide slide--code" style="align-items:center"><p class="eyebrow reveal">Sampling code</p><h2 class="slide__heading reveal">Uniform sampling: đơn giản, dễ tái sử dụng</h2><div class="code-card reveal" style="margin-top:24px"><span class="file-tag">sampling.py</span><pre><span class="kw">def</span> <span class="fn">uniform_sample_frames</span>(video, num_frames):
+    <span class="cm"># video: [T, H, W, C]</span>
+    total = video.shape[<span class="num">0</span>]
+    indices = torch.linspace(
+        <span class="num">0</span>, total - <span class="num">1</span>, steps=num_frames
+    ).long()
+    <span class="kw">return</span> video[indices]
+
+<span class="cm"># 100 frames → [0, 14, 28, …, 99]</span></pre></div></section>
+
+<!-- 10: Code -->
+<section class="slide slide--code" style="align-items:center;background:radial-gradient(ellipse at 75% 25%,var(--teal-dim),transparent 45%)"><p class="eyebrow teal reveal">Tubelet code</p><h2 class="slide__heading reveal">Conv3d tạo token video</h2><div class="code-card reveal" style="margin-top:24px"><span class="file-tag" style="background:var(--teal)">tubelet.py</span><pre><span class="kw">tubelet_embed</span> = nn.Conv3d(
+    in_channels=<span class="num">3</span>, out_channels=<span class="num">768</span>,
+    kernel_size=(<span class="num">2</span>, <span class="num">16</span>, <span class="num">16</span>),
+    stride=(<span class="num">2</span>, <span class="num">16</span>, <span class="num">16</span>)
+)
+
+<span class="cm">[B, C, T, H, W] → [B, 768, t, h, w]</span>
+tokens = tokens.flatten(<span class="num">2</span>).transpose(<span class="num">1</span>, <span class="num">2</span>)
+<span class="cm">→ [B, num_tokens, hidden_dim]</span></pre></div></section>
+
+<!-- 11: Dashboard -->
+<section class="slide slide--dashboard"><p class="eyebrow reveal">Token budget</p><h2 class="slide__heading reveal">Cùng một patch size, token tăng theo thời gian</h2><div class="token-strip reveal" style="margin-top:46px"><div class="token-row"><label>Image · 1 frame</label><div class="token-track"><div class="token-fill"></div></div><span class="token-value">196</span></div><div class="token-row"><label>Sampled · 8 frames</label><div class="token-track"><div class="token-fill"></div></div><span class="token-value">1,568</span></div><div class="token-row"><label>Video · 16 frames</label><div class="token-track"><div class="token-fill"></div></div><span class="token-value">3,136</span></div></div><div class="metric-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));max-width:620px;margin-top:42px"><div class="metric reveal"><div class="metric__value coral">32×</div><div class="metric__label">Dữ liệu so với một ảnh</div></div><div class="metric reveal"><div class="metric__value amber">N²</div><div class="metric__label">Self-attention tăng theo bình phương token</div></div></div></section>
+
+<!-- 12: Divider -->
+<section class="slide slide--divider"><span class="slide__number">03</span><div><p class="eyebrow reveal">Architectures</p><h2 class="slide__heading reveal">Ba cách học chuyển động</h2><p class="slide__subtitle reveal">CNN trực tiếp · RNN tuần tự · Transformer toàn cục</p></div></section>
+
+<!-- 13: Content -->
+<section class="slide slide--content"><div class="content-grid"><div><p class="eyebrow reveal">Video processing</p><h2 class="slide__heading reveal">Từ nhận diện hành động đến lái xe tự động</h2><ul class="bullets"><li class="reveal"><b class="amber">Action recognition</b> · tracking · captioning · summarization.</li><li class="reveal">Background subtraction · stabilization · surveillance analysis.</li><li class="reveal">Autonomous driving: đường, vật cản, biển báo.</li><li class="reveal">Healthcare: theo dõi bệnh nhân, hỗ trợ phẫu thuật.</li></ul></div><div class="visual-aside reveal"><div class="concept-grid" style="grid-template-columns:1fr 1fr;margin:0"><div class="card card--amber"><h3>Understand</h3><p>Hành động, vật thể, ngữ cảnh</p></div><div class="card card--teal"><h3>Transform</h3><p>Ổn định, tách nền, tóm tắt</p></div><div class="card card--coral"><h3>Extract</h3><p>Motion, depth, sensor signals</p></div><div class="card card--blue"><h3>Generate</h3><p>Caption, answer, conversation</p></div></div></div></div></section>
+
+<!-- 14: Content -->
+<section class="slide slide--content"><div class="content-grid right-heavy"><div class="visual-aside reveal"><div class="card card--coral"><p class="eyebrow coral">Deploy reality</p><h3 style="font-family:var(--font-display);font-size:38px;font-weight:400">Accuracy không phải toàn bộ câu chuyện.</h3><div style="margin-top:18px"><span class="chip coral-chip">RAM / VRAM</span><span class="chip coral-chip">storage</span><span class="chip coral-chip">latency</span><span class="chip coral-chip">privacy</span></div></div></div><div><p class="eyebrow coral reveal">Constraints</p><h2 class="slide__heading reveal">Video lớn, đắt và nhạy cảm</h2><ul class="bullets"><li class="reveal">Chiều thời gian làm dữ liệu lớn hơn ảnh rất nhiều.</li><li class="reveal">Resolution và fps cao kéo theo storage và compute cao.</li><li class="reveal">Video chứa khuôn mặt, hành vi, môi trường riêng tư và dữ liệu y tế.</li><li class="reveal">Triển khai cần security, consent, privacy và chống lạm dụng.</li></ul></div></div></section>
+
+<!-- 15: Diagram -->
+<section class="slide slide--diagram"><p class="eyebrow reveal">CNN family · 01</p><h2 class="slide__heading reveal">Two-Stream Network: appearance + motion</h2><div class="diagram-shell reveal"><div style="display:grid;grid-template-columns:1fr 100px 1fr;align-items:center;gap:22px;width:min(100%,900px)"><div class="card card--amber" style="text-align:center"><span class="eyebrow">Spatial stream</span><h3>RGB frames</h3><p>2D CNN học người, vật thể, bối cảnh và appearance.</p></div><div style="text-align:center;color:var(--amber);font:30px var(--font-mono)">↘<br><span style="font-size:13px;color:var(--muted)">fusion</span><br>↗</div><div class="card card--teal" style="text-align:center"><span class="eyebrow teal">Temporal stream</span><h3>Optical flow</h3><p>Biểu diễn hướng và tốc độ chuyển động giữa frame.</p></div><div></div><div style="grid-column:1/-1;text-align:center;border:1px solid var(--amber);border-radius:8px;padding:12px;color:var(--amber);font:14px var(--font-mono)">ACTION PREDICTION</div></div><div class="diagram-caption"><b>Trade-off:</b> hiệu quả action recognition nhưng optical flow làm pipeline phức tạp, không hoàn toàn end-to-end.</div></div></section>
+
+<!-- 16: Split -->
+<section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="eyebrow coral reveal">Direct 3D</p><h2 class="slide__heading reveal">3D CNN / 3D ResNet</h2><div class="card card--coral reveal" style="margin-top:22px"><p><b>Kernel:</b> time × height × width</p><p style="margin-top:10px">Học spatial pattern và temporal motion đồng thời.</p></div><ul class="bullets"><li class="reveal">Mạnh cho action recognition.</li><li class="reveal">Nhiều tham số, train chậm, dễ overfit.</li></ul></div><div class="split-panel secondary"><p class="eyebrow teal reveal">Factorized conv</p><h2 class="slide__heading reveal">R(2+1)D</h2><div class="flow reveal" style="margin-top:22px"><div class="flow-step" style="border-top-color:var(--amber)"><strong>2D</strong><p>spatial trong từng frame</p></div><div class="flow-arrow">→</div><div class="flow-step" style="border-top-color:var(--teal)"><strong>1D</strong><p>temporal giữa frame</p></div></div><p class="slide__body reveal" style="margin-top:20px">Thêm non-linearity giữa hai bước, dễ tối ưu hơn conv3d trực tiếp.</p></div></div></section>
+
+<!-- 17: Content -->
+<section class="slide slide--content"><div style="width:100%"><p class="eyebrow reveal">CNN directions</p><h2 class="slide__heading reveal">Ba hướng CNN video hiện đại</h2><div class="model-grid"><div class="card card--blue reveal"><h3>MoCo</h3><p>Self-supervised contrastive learning: momentum encoder + queue negative samples.</p><small>ít label · nhiều video</small></div><div class="card card--teal reveal"><h3>X3D</h3><p>3D ConvNet nhẹ; mở rộng dần depth, width, temporal resolution.</p><small>edge · mobile</small></div><div class="card card--amber reveal"><h3>ST-GCN</h3><p>Graph trên skeleton: node là khớp, edge là xương và liên kết theo thời gian.</p><small>motion · sports · surveillance</small></div></div><p class="slide__body reveal" style="margin-top:28px">CNN giỏi local spatio-temporal features; câu hỏi còn lại là làm sao giữ quan hệ xa trong một video dài.</p></div></section>
+
+<!-- 18: Divider -->
+<section class="slide slide--divider"><span class="slide__number">04</span><div><p class="eyebrow reveal">Sequence models</p><h2 class="slide__heading reveal">RNN nhìn video như một chuỗi</h2><p class="slide__subtitle reveal">CNN hiểu từng frame · LSTM nhớ những frame trước</p></div></section>
+
+<!-- 19: Diagram -->
+<section class="slide slide--diagram"><p class="eyebrow reveal">LRCN</p><h2 class="slide__heading reveal">CNN + LSTM: từ frame đến prediction</h2><div class="diagram-shell reveal"><div class="flow" style="margin:0"><div class="flow-step" style="border-top-color:var(--amber);text-align:center"><span class="flow-num">T=1…T</span><strong>Frames</strong><p>ảnh RGB theo thời gian</p></div><div class="flow-arrow">→</div><div class="flow-step" style="border-top-color:var(--blue);text-align:center"><span class="flow-num blue">CNN</span><strong>f₁…fₜ</strong><p>feature vector mỗi frame</p></div><div class="flow-arrow">→</div><div class="flow-step" style="border-top-color:var(--teal);text-align:center"><span class="flow-num teal">LSTM</span><strong>hₜ</strong><p>hidden state tích lũy</p></div><div class="flow-arrow">→</div><div class="flow-step" style="border-top-color:var(--coral);text-align:center"><span class="flow-num coral">HEAD</span><strong>ŷ</strong><p>class hoặc caption</p></div></div><div class="diagram-caption"><b>LRCN:</b> CNN trích xuất feature; LSTM học sự thay đổi feature theo thời gian.</div></div></section>
+
+<!-- 20: Split -->
+<section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="eyebrow teal reveal">Keep the map</p><h2 class="slide__heading reveal">ConvLSTM</h2><p class="slide__body reveal" style="margin-top:16px">Thay linear transform bằng convolution trong các cổng LSTM.</p><div class="card card--teal reveal" style="margin-top:25px"><p><b>LSTM thường:</b> vector → mất spatial structure</p><p style="margin-top:10px"><b>ConvLSTM:</b> feature map 2D → giữ cấu trúc không gian</p></div></div><div class="split-panel secondary"><p class="eyebrow amber reveal">Sequence tasks</p><h2 class="slide__heading reveal">Attention & representation</h2><ul class="bullets"><li class="reveal">Encoder LSTM nén video, Decoder tái tạo hoặc dự đoán frame tiếp theo.</li><li class="reveal">Temporal attention chọn frame quan trọng.</li><li class="reveal">Spatial attention chọn vùng quan trọng trong frame.</li></ul></div></div></section>
+
+<!-- 21: Content -->
+<section class="slide slide--content"><div class="content-grid"><div><p class="eyebrow coral reveal">RNN limitations</p><h2 class="slide__heading reveal">Vì sao RNN dần nhường chỗ?</h2><ul class="bullets"><li class="reveal"><b class="coral">Long-term dependency:</b> video dài làm thông tin đầu chuỗi dễ bị quên.</li><li class="reveal"><b class="coral">Sequential:</b> phải xử lý từng frame, khó song song hóa.</li><li class="reveal"><b class="coral">Slow:</b> training và inference kém hiệu quả trên hardware hiện đại.</li></ul></div><div class="visual-aside reveal"><div class="card card--coral"><p class="eyebrow coral">The bottleneck</p><div style="font:clamp(27px,4vw,54px) var(--font-mono);color:var(--coral);margin:12px 0">f₁ → f₂ → f₃ → …</div><p>Mọi bước phụ thuộc bước trước. Không thể “nhảy” thẳng đến frame cuối.</p></div></div></div></section>
+
+<!-- 22: Code -->
+<section class="slide slide--code" style="align-items:center"><p class="eyebrow reveal">CNNLSTM skeleton</p><h2 class="slide__heading reveal">Feature extraction trước, temporal modeling sau</h2><div class="code-card reveal" style="margin-top:24px"><span class="file-tag">model.py</span><pre><span class="cm"># x: [B, T, C, H, W]</span>
+x = x.view(B * T, C, H, W)
+features = cnn(x).flatten(<span class="num">1</span>)
+features = features.view(B, T, -<span class="num">1</span>)
+
+output, _ = lstm(features)
+last = output[:, -<span class="num">1</span>]
+<span class="kw">return</span> classifier(last)
+
+<span class="cm"># Timestep loop nằm bên trong LSTM</span></pre></div></section>
+
+<!-- 23: Divider -->
+<section class="slide slide--divider"><span class="slide__number">05</span><div><p class="eyebrow reveal">Global context</p><h2 class="slide__heading reveal">Transformer mở rộng tầm nhìn</h2><p class="slide__subtitle reveal">Nhưng mỗi token mới đều có giá</p></div></section>
+
+<!-- 24: Content -->
+<section class="slide slide--content"><div class="content-grid"><div><p class="eyebrow reveal">ViT recap</p><h2 class="slide__heading reveal">Ảnh được biến thành chuỗi token</h2><ul class="bullets"><li class="reveal">Chia ảnh thành patch, flatten và linear projection.</li><li class="reveal">Thêm positional embedding để biết patch nằm ở đâu.</li><li class="reveal">Transformer Encoder học global context.</li><li class="reveal">CLS token hoặc pooling đưa ra classifier.</li></ul></div><div class="visual-aside reveal"><div class="flow" style="flex-direction:column;margin:0"><div class="flow-step" style="border-top-color:var(--amber)"><strong>224×224</strong><p>image</p></div><div class="flow-arrow" style="transform:rotate(90deg)">→</div><div class="flow-step" style="border-top-color:var(--teal)"><strong>196</strong><p>patch tokens + position</p></div><div class="flow-arrow" style="transform:rotate(90deg)">→</div><div class="flow-step" style="border-top-color:var(--coral)"><strong>CLS</strong><p>classification</p></div></div></div></div></section>
+
+<!-- 25: Dashboard -->
+<section class="slide slide--dashboard"><p class="eyebrow reveal">Attention cost</p><h2 class="slide__heading reveal">16 frame không chỉ là “gấp 16 lần”</h2><div class="metric-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="metric reveal"><div class="metric__value amber">196</div><div class="metric__label">Image tokens</div><div class="metric__note">14 × 14 patches</div></div><div class="metric reveal"><div class="metric__value teal">3,136</div><div class="metric__label">Video tokens</div><div class="metric__note">16 × 14 × 14</div></div><div class="metric reveal"><div class="metric__value coral">256×</div><div class="metric__label">Attention pairs</div><div class="metric__note">xấp xỉ theo N²</div></div></div><div class="attention-grid reveal" style="margin:36px auto 0"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><p class="slide__body reveal" style="text-align:center;margin-top:16px">Đó là lý do video Transformer cần sampling, tubelet hoặc factorized attention.</p></section>
+
+<!-- 26: Diagram -->
+<section class="slide slide--diagram"><p class="eyebrow reveal">ViViT</p><h2 class="slide__heading reveal">Bốn cách tổ chức attention</h2><div class="diagram-shell reveal"><div class="model-grid" style="margin:0;max-width:1000px"><div class="card card--coral"><span class="eyebrow coral">Model 1</span><h3>Spatio-temporal</h3><p>Toàn bộ token cùng attention tới mọi token.</p></div><div class="card card--teal"><span class="eyebrow teal">Model 2</span><h3>Factorised Encoder</h3><p>Spatial Encoder từng frame → Temporal Encoder.</p></div><div class="card card--amber"><span class="eyebrow">Model 3</span><h3>Factorised Self-Attention</h3><p>Spatial cùng frame + temporal cùng vị trí.</p></div><div class="card card--blue"><span class="eyebrow blue">Model 4</span><h3>Factorised Dot-Product</h3><p>Chia heads: một nửa spatial, một nửa temporal.</p></div></div><div class="diagram-caption"><b>Idea:</b> tách không gian và thời gian để giữ signal mà giảm chi phí.</div></div></section>
+
+<!-- 27: Table -->
+<section class="slide slide--table"><p class="eyebrow reveal">ViViT design space</p><h2 class="slide__heading reveal">Full attention mạnh; factorization thực dụng hơn</h2><div class="table-wrap reveal"><div class="table-scroll"><table class="data-table"><thead><tr><th>Thiết kế</th><th>Cách xử lý</th><th>Complexity trực giác</th><th>Đổi lại</th></tr></thead><tbody><tr><td><b>Model 1</b></td><td>Attention toàn bộ token</td><td><code>n_h² n_w² n_t²</code></td><td><span class="status cost">đắt nhất</span></td></tr><tr><td><b>Model 2</b></td><td>Spatial rồi temporal encoder</td><td><code>n_h² n_w² + n_t²</code></td><td><span class="status good">hiệu quả</span></td></tr><tr><td><b>Model 3</b></td><td>Spatial/temporal trong mỗi layer</td><td>factorized</td><td><span class="status good">cân bằng</span></td></tr><tr><td><b>Model 4</b></td><td>Chia attention heads</td><td>factorized</td><td><span class="status warn">ít tương tác hơn</span></td></tr></tbody></table></div></div><p class="slide__body reveal" style="margin-top:14px">Pretrain từ image model đặc biệt quan trọng vì video dataset thường nhỏ hơn image dataset.</p></section>
+
+<!-- 28: Diagram -->
+<section class="slide slide--diagram"><p class="eyebrow reveal">TimeSFormer</p><h2 class="slide__heading reveal">Attention có thể thưa, chung hoặc chia đôi</h2><div class="diagram-shell reveal"><div class="model-grid" style="margin:0;max-width:1050px;grid-template-columns:repeat(5,minmax(0,1fr))"><div class="card card--blue"><h3>Sparse</h3><p>ViT-like, trong từng frame.</p></div><div class="card card--coral"><h3>Joint</h3><p>Toàn bộ space-time.</p></div><div class="card card--teal"><h3>Divided</h3><p>Temporal → spatial.</p></div><div class="card card--amber"><h3>Local / Global</h3><p>Chọn lọc cục bộ và toàn cục.</p></div><div class="card card--blue"><h3>Axial</h3><p>Tách từng trục.</p></div></div><div class="card card--teal reveal" style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:min(90%,520px);text-align:center"><p><b>Divided Space-Time Attention</b> thường là điểm cân bằng tốt giữa accuracy và số tham số.</p></div></div></section>
+
+<!-- 29: Divider -->
+<section class="slide slide--divider"><span class="slide__number">06</span><div><p class="eyebrow reveal">Multimodality</p><h2 class="slide__heading reveal">Một video có nhiều kênh sự thật</h2><p class="slide__subtitle reveal">Visual là trung tâm — nhưng không phải toàn bộ câu chuyện.</p></div></section>
+
+<!-- 30: Diagram -->
+<section class="slide slide--diagram"><p class="eyebrow reveal">Modalities</p><h2 class="slide__heading reveal">Video = visual + audio + text + motion + context</h2><div class="diagram-shell reveal"><div class="orbit"><div class="orbit-center">SHARED<br>REPRESENTATION</div><div class="orbit-item">Visual<br>frames</div><div class="orbit-item">Audio<br>speech / music</div><div class="orbit-item">Text<br>subtitle / OCR</div><div class="orbit-item">Motion<br>flow</div><div class="orbit-item">Depth<br>3D</div><div class="orbit-item" style="top:50%;left:50%;transform:translate(-50%,-50%) translateY(190px)">Sensor<br>IMU / biometric</div></div><div class="diagram-caption"><b>Ví dụ:</b> hình ảnh biết “đang chơi đàn”; audio xác nhận “đang phát nhạc”.</div></div></section>
+
+<!-- 31: Split -->
+<section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="eyebrow blue reveal">Video + Text</p><h2 class="slide__heading reveal">VideoBERT</h2><p class="slide__body reveal" style="margin-top:14px">ASR text + visual tokens từ S3D cùng đi vào pretraining.</p><ul class="bullets"><li class="reveal">Linguistic–visual alignment</li><li class="reveal">Masked Language Modeling</li><li class="reveal">Masked Frame Modeling</li></ul></div><div class="split-panel secondary"><p class="eyebrow amber reveal">Scale the data</p><h2 class="slide__heading reveal">MERLOT</h2><p class="slide__body reveal" style="margin-top:14px">Học từ <b class="amber">YT-Temporal-180M</b>, tập trung vào dữ liệu video-text quy mô lớn.</p><div class="card card--amber reveal" style="margin-top:23px"><p><b>Tasks:</b> temporal reordering · frame-caption matching · MLM</p><p style="margin-top:10px">Reasoning đa phương thức thường cần data scale, không chỉ kiến trúc mới.</p></div></div></div></section>
+
+<!-- 32: Split -->
+<section class="slide slide--split"><div class="split-panels"><div class="split-panel primary"><p class="eyebrow teal reveal">Video + Audio + Text</p><h2 class="slide__heading reveal">VATT</h2><p class="slide__body reveal" style="margin-top:14px">Self-supervised trên raw video, audio và text.</p><div class="card card--teal reveal" style="margin-top:22px"><p><b>Droptoken:</b> giảm redundancy.</p><p style="margin-top:8px"><b>Contrastive:</b> NCE cho video-audio; MIL-NCE cho video-text.</p></div></div><div class="split-panel secondary"><p class="eyebrow coral reveal">Video conversation</p><h2 class="slide__heading reveal">Video-LLaMA</h2><p class="slide__body reveal" style="margin-top:14px">Hai nhánh: vision-language và audio-language.</p><ul class="bullets"><li class="reveal">Pretraining để align modality.</li><li class="reveal">Instruction fine-tuning để trả lời theo chỉ dẫn.</li><li class="reveal">Ứng dụng: hỏi đáp và conversation về video.</li></ul></div></div></section>
+
+<!-- 33: Diagram -->
+<section class="slide slide--diagram"><p class="eyebrow reveal">ImageBind</p><h2 class="slide__heading reveal">Một embedding space, nhiều modality</h2><div class="diagram-shell reveal"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:min(100%,820px)"><div class="card card--amber" style="grid-column:2;text-align:center"><h3>Image</h3><p>anchor modality</p></div><div class="card card--teal"><h3>Video</h3><p>image ↔ video</p></div><div class="card card--blue"><h3>Text</h3><p>image ↔ text</p></div><div class="card card--coral"><h3>Audio</h3><p>image ↔ audio</p></div><div class="card card--teal"><h3>Depth</h3><p>image ↔ depth</p></div><div class="card card--amber"><h3>Thermal / IMU</h3><p>image ↔ sensor</p></div><div style="grid-column:1/-1;text-align:center;padding:16px;color:var(--muted);font:13px var(--font-mono);border-top:1px dashed var(--border-strong)">Paired image links → suy ra audio ↔ text ↔ depth, dù không train trực tiếp mọi cặp.</div></div><div class="diagram-caption"><b>Loss:</b> thường dùng InfoNCE để kéo các cặp tương ứng lại gần.</div></div></section>
+
+<!-- 34: Table -->
+<section class="slide slide--table"><p class="eyebrow reveal">Model map</p><h2 class="slide__heading reveal">Chọn họ model theo tín hiệu cần hiểu</h2><div class="table-wrap reveal"><div class="table-scroll"><table class="data-table"><thead><tr><th>Nhóm</th><th>Mạnh ở đâu</th><th>Yếu ở đâu</th></tr></thead><tbody><tr><td class="amber"><b>Two-Stream CNN</b></td><td>Tách appearance / motion rõ</td><td>Cần optical flow, pipeline phức tạp</td></tr><tr><td class="coral"><b>3D CNN</b></td><td>Spatio-temporal trực tiếp</td><td>Tốn compute</td></tr><tr><td class="teal"><b>R(2+1)D</b></td><td>Hiệu quả hơn 3D CNN</td><td>Context dài hạn còn hạn chế</td></tr><tr><td class="blue"><b>CNN + LSTM</b></td><td>Dễ hiểu, hợp sequence</td><td>Chậm, khó song song</td></tr><tr><td class="teal"><b>ConvLSTM</b></td><td>Giữ spatial structure</td><td>Không tối ưu cho video dài</td></tr><tr><td class="amber"><b>ViViT / TimeSFormer</b></td><td>Global temporal context</td><td>Nhiều token, cần data + compute</td></tr><tr><td class="coral"><b>Multimodal</b></td><td>Hiểu video đầy đủ hơn</td><td>Align modality và data phức tạp</td></tr></tbody></table></div></div></section>
+
+<!-- 35: Content -->
+<section class="slide slide--content"><div class="content-grid"><div><p class="eyebrow reveal">Glossary</p><h2 class="slide__heading reveal">Sáu khái niệm cần nhớ</h2><div class="concept-grid" style="grid-template-columns:1fr 1fr;margin-top:18px"><div class="card card--amber reveal"><h3>Spatial</h3><p>Trong một frame.</p></div><div class="card card--teal reveal"><h3>Temporal</h3><p>Thay đổi giữa frame.</p></div><div class="card card--coral reveal"><h3>Optical flow</h3><p>Vector chuyển động pixel.</p></div><div class="card card--blue reveal"><h3>3D Conv</h3><p>Kernel T×H×W.</p></div><div class="card card--teal reveal"><h3>Tubelet</h3><p>Patch 3D tạo token.</p></div><div class="card card--amber reveal"><h3>Contrastive</h3><p>Positive gần, negative xa.</p></div></div></div><div class="visual-aside reveal"><div class="card card--teal"><p class="eyebrow teal">Mental model</p><h3>Spatial<br>+ Temporal<br><span class="amber">+ Alignment</span></h3><p>Mọi kiến trúc trong unit đều là một cách tối ưu ba bài toán này.</p></div></div></div></section>
+
+<!-- 36: Quote -->
+<section class="slide slide--quote"><div class="quote-mark reveal">“</div><blockquote class="reveal">Video model tốt không chỉ nhìn nhiều frame hơn — nó chọn đúng signal, đúng thời điểm và đúng modality.</blockquote><cite class="reveal">Unit 07 · Core design principle</cite></section>
+
+<!-- 37: Full bleed -->
+<section class="slide slide--bleed"><div class="bleed-bg"></div><div class="bleed-grid"></div><div class="bleed-scrim"></div><div class="bleed-content"><p class="eyebrow teal reveal">Final takeaway</p><h2 class="slide__heading reveal">Cân bằng accuracy,<br>token, coverage và compute.</h2><p class="slide__subtitle reveal" style="color:rgba(232,240,239,.74);max-width:700px">Video intelligence là bài toán thiết kế hệ thống: từ sampling và embedding đến backbone, alignment, data và privacy.</p><div class="reveal" style="margin-top:28px"><span class="chip teal-chip">sample wisely</span><span class="chip">factorize attention</span><span class="chip coral-chip">align modalities</span></div></div></section>
+
+</div>
+<script>
+(function () {
+  function SlideEngine() {
+    this.deck = document.querySelector('.deck');
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.current = 0;
+    this.total = this.slides.length;
+    this.buildChrome(); this.bindEvents(); this.observe(); this.update();
+  }
+  SlideEngine.prototype.buildChrome = function () {
+    var self = this;
+    this.bar = document.createElement('div'); this.bar.className = 'deck-progress'; document.body.appendChild(this.bar);
+    var dots = document.createElement('div'); dots.className = 'deck-dots';
+    this.slides.forEach(function (_, i) { var d = document.createElement('button'); d.className = 'deck-dot'; d.title = 'Slide ' + (i + 1); d.setAttribute('aria-label', 'Go to slide ' + (i + 1)); d.onclick = function () { self.goTo(i); }; dots.appendChild(d); });
+    document.body.appendChild(dots); this.dots = Array.from(dots.children);
+    this.counter = document.createElement('div'); this.counter.className = 'deck-counter'; document.body.appendChild(this.counter);
+    this.hints = document.createElement('div'); this.hints.className = 'deck-hints'; this.hints.textContent = '← → / ↑ ↓ / Space  ·  scroll to navigate'; document.body.appendChild(this.hints);
+    var nav = document.createElement('div'); nav.className = 'deck-nav';
+    var prev = document.createElement('button'); prev.textContent = '←'; prev.title = 'Previous slide'; prev.onclick = function () { self.prev(); };
+    var next = document.createElement('button'); next.textContent = '→'; next.title = 'Next slide'; next.onclick = function () { self.next(); };
+    nav.append(prev, next); document.body.appendChild(nav);
+    setTimeout(function () { self.hints.classList.add('faded'); }, 5000);
+  };
+  SlideEngine.prototype.bindEvents = function () {
+    var self = this;
+    document.addEventListener('keydown', function (e) {
+      if (e.target.closest('input, textarea, button')) return;
+      if (['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)) { e.preventDefault(); self.next(); }
+      else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); self.prev(); }
+      else if (e.key === 'Home') { e.preventDefault(); self.goTo(0); }
+      else if (e.key === 'End') { e.preventDefault(); self.goTo(self.total - 1); }
+      self.hints.classList.add('faded');
+    });
+    var touchY = 0;
+    this.deck.addEventListener('touchstart', function (e) { touchY = e.touches[0].clientY; }, { passive: true });
+    this.deck.addEventListener('touchend', function (e) { var dy = touchY - e.changedTouches[0].clientY; if (Math.abs(dy) > 50) dy > 0 ? self.next() : self.prev(); });
+  };
+  SlideEngine.prototype.observe = function () {
+    var self = this;
+    var observer = new IntersectionObserver(function (entries) { entries.forEach(function (entry) { if (entry.isIntersecting) { entry.target.classList.add('visible'); self.current = self.slides.indexOf(entry.target); self.update(); } }); }, { threshold: .55 });
+    this.slides.forEach(function (slide) { observer.observe(slide); });
+  };
+  SlideEngine.prototype.goTo = function (i) { this.slides[Math.max(0, Math.min(i, this.total - 1))].scrollIntoView({ behavior: 'smooth' }); };
+  SlideEngine.prototype.next = function () { if (this.current < this.total - 1) this.goTo(this.current + 1); };
+  SlideEngine.prototype.prev = function () { if (this.current > 0) this.goTo(this.current - 1); };
+  SlideEngine.prototype.update = function () { this.bar.style.width = ((this.current + 1) / this.total * 100) + '%'; this.dots.forEach(function (d, i) { d.classList.toggle('active', i === this.current); }, this); this.counter.textContent = (this.current + 1) + ' / ' + this.total; };
+  new SlideEngine();
+})();
+</script>
+</body>
+</html>
