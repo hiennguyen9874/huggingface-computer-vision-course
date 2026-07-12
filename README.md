@@ -1,1 +1,32 @@
 # Copied version of [github.com/huggingface/computer-vision-course](https://github.com/huggingface/computer-vision-course)
+
+## Slides
+
+- [unit01](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit01-computer-vision.html)
+- [unit02](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit02-cnn.html)
+- [unit03](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit03-vision-transformers.html)
+- [unit04](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit04-multimodal.html)
+- [unit05](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit05-generative-models.html)
+- [unit06](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit06-computer-vision-tasks.html)
+- [unit07](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit07-video-processing-slides.html)
+- [unit08](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit08-3d-computer-vision-slides.html)
+- [unit09](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit09-model-optimization-deployment.html)
+- [unit10](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit10-synthetic-data-slides.html)
+- [unit11](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit11-zero-shot-learning-slides.html)
+- [unit12](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit12-ethics-bias-slides.html)
+- [unit13](https://htmlpreview.github.io/?https://github.com/hiennguyen9874/huggingface-computer-vision-course/blob/main/slides/unit13-architecture-alternatives.html)
+
+## Chapter-Vi
+- [unit01](chapters-vi/unit01.md)
+- [unit02](chapters-vi/unit02.md)
+- [unit03](chapters-vi/unit03.md)
+- [unit04](chapters-vi/unit04.md)
+- [unit05](chapters-vi/unit05.md)
+- [unit06](chapters-vi/unit06.md)
+- [unit07](chapters-vi/unit07.md)
+- [unit08](chapters-vi/unit08.md)
+- [unit09](chapters-vi/unit09.md)
+- [unit10](chapters-vi/unit10.md)
+- [unit11](chapters-vi/unit11.md)
+- [unit12](chapters-vi/unit12.md)
+- [unit13](chapters-vi/unit13.md)
