@@ -16,6 +16,23 @@ Ví dụ:
 
 Một synthetic dataset tốt nên giống dữ liệu thật ở các khía cạnh:
 
+### Sơ đồ tổng quan: từ dữ liệu đến mô hình
+
+```mermaid
+flowchart LR
+    R["Dữ liệu thật<br/>thiếu, đắt, nhạy cảm"] --> G{"Phương pháp sinh"}
+    G --> P["PBR / simulator<br/>scene 3D"]
+    G --> C["Point cloud<br/>LiDAR / 3D"]
+    G --> M["GAN / Diffusion<br/>mô hình sinh"]
+    P --> S["Synthetic dataset<br/>có thể có nhãn tự động"]
+    C --> S
+    M --> S
+    S --> T["Huấn luyện mô hình"]
+    T --> E["Đánh giá trên<br/>real validation/test"]
+```
+
+Sơ đồ này nhấn mạnh rằng synthetic data là dữ liệu bổ sung, không phải lý do để bỏ qua việc đánh giá trên dữ liệu thật.
+
 - Phân phối màu sắc.
 - Hình dạng.
 - Texture.
@@ -115,6 +132,20 @@ Unit 10 nhắc đến ba hướng chính:
 
 **Physically Based Rendering**, viết tắt là **PBR**, là kỹ thuật render ảnh bằng cách mô phỏng cách ánh sáng tương tác với vật liệu ngoài đời.
 
+### Sơ đồ pipeline PBR
+
+```mermaid
+flowchart LR
+    A["3D object<br/>model + texture"] --> M["Material<br/>roughness / metallic"]
+    L["Lighting<br/>ánh sáng + bóng"] --> R["PBR renderer"]
+    M --> R
+    C["Camera<br/>vị trí + góc nhìn"] --> R
+    R --> I["RGB image"]
+    R --> Y["Depth / normal<br/>segmentation / pose"]
+```
+
+Ưu điểm quan trọng của pipeline này là ảnh và nhãn được sinh từ cùng một scene, nên nhãn hình học thường chính xác hơn so với annotation thủ công.
+
 PBR quan tâm đến:
 
 - Ánh sáng chiếu vào object.
@@ -139,6 +170,16 @@ Mục tiêu của PBR:
 ## 4.2 Reality gap là gì?
 
 **Reality gap** là khoảng cách giữa dữ liệu synthetic và dữ liệu thật.
+
+```mermaid
+flowchart LR
+    S["Synthetic quá sạch<br/>ít noise, pose cố định"] --> H["Model học shortcut<br/>thay vì đặc trưng thật"]
+    H --> F["Fail trên real data"]
+    R["Domain randomization<br/>+ mix real data"] --> B["Giảm reality gap"]
+    B --> F2["Robust hơn trên<br/>real validation/test"]
+```
+
+Mục tiêu không phải làm mọi ảnh synthetic hoàn hảo, mà là tạo đủ biến thiên để mô hình không phụ thuộc vào một pattern giả.
 
 Ví dụ mô hình được train trên ảnh render quá sạch:
 
@@ -455,6 +496,20 @@ Point cloud dùng nhiều trong:
 
 **LiDAR** đo khoảng cách bằng cách phát tia laser và đo thời gian tia phản xạ quay lại.
 
+### Sơ đồ: từ phép đo LiDAR đến point cloud
+
+```mermaid
+flowchart LR
+    S["LiDAR sensor"] --> L["Phát xung laser"]
+    L --> O["Vật thể / bề mặt"]
+    O --> T["Tia phản xạ<br/>đo time of flight"]
+    T --> D["Tính khoảng cách<br/>d = c × t / 2"]
+    D --> P["Chiếu theo hướng tia<br/>→ điểm (x, y, z)"]
+    P --> C["Point cloud<br/>+ RGB / intensity / label"]
+```
+
+Chia cho `2` vì tia laser đi từ sensor đến vật thể rồi quay trở lại sensor.
+
 Nguyên lý đơn giản:
 
 ```text
@@ -588,6 +643,21 @@ print(points[:5])
 ## 7.1 GAN là gì?
 
 **GAN – Generative Adversarial Network** gồm hai mạng:
+
+### Sơ đồ vòng lặp adversarial
+
+```mermaid
+flowchart LR
+    Z["Random noise z"] --> G["Generator"]
+    G --> F["Ảnh synthetic"]
+    R["Ảnh real"] --> D["Discriminator"]
+    F --> D
+    D --> Q["Real / fake probability"]
+    Q -. "gradient" .-> G
+    Q -. "học phân biệt" .-> D
+```
+
+Generator cố tạo ảnh giống dữ liệu thật, còn Discriminator cố phát hiện ảnh giả. Hai mục tiêu đối nghịch này được tối ưu xen kẽ trong quá trình huấn luyện.
 
 1. **Generator**
 2. **Discriminator**
@@ -736,6 +806,21 @@ Vì vậy cần:
 ## 8.1 Diffusion model hoạt động thế nào?
 
 Diffusion model học cách biến noise thành ảnh.
+
+### Sơ đồ hai chiều của diffusion
+
+```mermaid
+flowchart LR
+    subgraph Train["Training"]
+        X["Ảnh thật x₀"] --> N1["Thêm Gaussian noise<br/>tăng dần"] --> NT["Noise xₜ"]
+    end
+    subgraph Generate["Sinh ảnh"]
+        Z["Random noise"] --> D1["Denoise step 1"] --> D2["Denoise step 2"] --> DN["..."] --> O["Ảnh sinh x₀"]
+    end
+    NT -. "học cách khử noise" .-> D1
+```
+
+Training thêm noise để model học quy luật khử noise; khi sinh ảnh, ta bắt đầu từ random noise rồi khử dần đến ảnh cuối.
 
 Training gồm hai ý tưởng:
 
@@ -920,6 +1005,17 @@ Custom Diffusion học nhiều concept cùng lúc và chỉ update một phần 
 
 ## 9.1 Overfitting vào pattern giả
 
+### Trực quan: shortcut làm mô hình thất bại
+
+```mermaid
+flowchart LR
+    S["Synthetic dataset<br/>circle luôn đỏ<br/>square luôn xanh"] --> L["Model học shortcut:<br/>màu = class"]
+    T["Real test:<br/>red square"] --> P["Dự đoán sai"]
+    L --> P
+    A["Random màu, size,<br/>background, vị trí"] --> R["Đặc trưng đa dạng hơn"]
+    R --> P2["Tổng quát tốt hơn"]
+```
+
 Nếu synthetic data quá đều, model học nhầm shortcut.
 
 Ví dụ:
@@ -993,6 +1089,21 @@ Các lỗi thường gặp:
 # 10. Đánh giá chất lượng Synthetic Data
 
 Unit 10 nhắc ba metric quan trọng:
+
+### Sơ đồ chọn cách đánh giá
+
+```mermaid
+flowchart TD
+    A["Synthetic dataset"] --> B["Đo chất lượng ảnh?"]
+    B --> F["FID<br/>phân phối feature gần real"]
+    B --> I["IS<br/>độ rõ / confidence của ảnh sinh"]
+    A --> C["Đo ích lợi cho task?"]
+    C --> K["CAS hoặc downstream metric<br/>train synthetic, test real"]
+    K --> D["So sánh với real-only<br/>và real + synthetic"]
+    D --> E["Chỉ giữ synthetic nếu<br/>real test cải thiện"]
+```
+
+Không nên dùng một metric duy nhất: FID/IS mô tả chất lượng hoặc phân phối, còn CAS và kết quả downstream cho biết dữ liệu có hữu ích cho bài toán hay không.
 
 ## 10.1 FID – Frechet Inception Distance
 

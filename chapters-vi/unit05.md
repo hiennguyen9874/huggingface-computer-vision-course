@@ -42,6 +42,20 @@ Tức là: với ảnh `x`, dự đoán label `y`.
 
 Ví dụ: ảnh này là mèo hay chó?
 
+### Sơ đồ: discriminative và generative
+
+```mermaid
+flowchart LR
+    X["Ảnh x"] --> D["Discriminative<br/>học p(y | x)"]
+    D --> Y["Label y"]
+    Z["Noise z"] --> G["Generative<br/>học p(x)"]
+    G --> I["Ảnh mới"]
+    C["Condition c<br/>text / ảnh"] --> CG["Generative có điều kiện<br/>học p(x | c)"]
+    CG --> IC["Ảnh mới theo condition"]
+```
+
+Generative model có thể bắt đầu từ noise hoặc nhận thêm condition như text, ảnh đầu vào hay mask.
+
 ---
 
 ## Generative Models
@@ -119,6 +133,15 @@ Ví dụ:
 - Ảnh gốc + prompt -> ảnh chỉnh sửa
 
 Thường dùng CycleGAN, diffusion image-to-image, ControlNet.
+
+### Sơ đồ: ba hướng biến đổi ảnh
+
+```mermaid
+flowchart LR
+    Z["Noise z"] --> N["Noise-to-image"] --> A["Ảnh mới"]
+    T["Text prompt"] --> TT["Text-to-image"] --> B["Ảnh theo mô tả"]
+    X["Ảnh đầu vào"] --> II["Image-to-image"] --> C["Ảnh đã biến đổi"]
+```
 
 ---
 
@@ -243,6 +266,19 @@ Range thường được nói là:
 
 Quan trọng: CLIP Score đo độ khớp text-image, không đảm bảo ảnh đẹp hay không có artifact.
 
+### Sơ đồ: chọn metric theo bài toán
+
+```mermaid
+flowchart TD
+    A["Cần đánh giá ảnh sinh"] --> B{"Có ảnh ground truth?"}
+    B -->|Có| C["PSNR / SSIM<br/>so sánh với ảnh đích"]
+    B -->|Không| D{"Cần đo phân phối ảnh?"}
+    D -->|Có| E["FID / Inception Score<br/>đánh giá tập ảnh sinh"]
+    D -->|Không, có prompt| F["CLIP Score<br/>độ khớp ảnh–text"]
+```
+
+Không nên so sánh trực tiếp điểm số giữa các metric hoặc giữa các domain khác nhau; hãy xem metric như tín hiệu bổ sung cho đánh giá bằng mắt và đánh giá của con người.
+
 ---
 
 # 4. GAN — Generative Adversarial Networks
@@ -277,6 +313,20 @@ image -> Discriminator -> real/fake probability
 ```
 
 Mục tiêu: phân biệt ảnh thật từ dataset và ảnh giả từ Generator.
+
+### Sơ đồ: vòng lặp adversarial
+
+```mermaid
+flowchart LR
+    Z["Noise z"] --> G["Generator"] --> F["Ảnh giả"]
+    R["Ảnh thật từ dataset"] --> D["Discriminator"]
+    F --> D
+    D --> O["Xác suất real / fake"]
+    O -.->|gradient cập nhật| G
+    O -.->|gradient cập nhật| D
+```
+
+Generator cố làm ảnh giả giống ảnh thật, còn Discriminator cố phân biệt hai nguồn ảnh này.
 
 ---
 
@@ -473,6 +523,21 @@ z = μ + σ * ε
 
 Nhờ đó gradient đi qua `μ` và `σ`.
 
+### Sơ đồ: reparameterization trick
+
+```mermaid
+flowchart LR
+    X["Ảnh x"] --> E["Encoder"]
+    E --> MU["μ"]
+    E --> S["σ"]
+    EPS["ε ~ N(0, I)"] --> Z["z = μ + σ·ε"]
+    MU --> Z
+    S --> Z
+    Z --> D["Decoder"] --> XR["Ảnh tái tạo x′"]
+```
+
+Randomness được tách thành `ε`, nên phép biến đổi từ `μ`, `σ` đến `z` vẫn cho phép lan truyền gradient.
+
 Pseudo-code:
 
 ```python
@@ -639,6 +704,18 @@ age
 pose
 glasses
 hair style
+```
+
+### Sơ đồ: từ latent đến style theo từng layer
+
+```mermaid
+flowchart LR
+    Z["z"] --> M["Mapping Network<br/>MLP"] --> W["w"]
+    W --> L["Layer độ phân giải thấp<br/>pose · face shape · glasses"]
+    W --> H["Layer độ phân giải cao<br/>texture · tóc · mắt"]
+    N["Noise map riêng từng layer"] --> H
+    L --> O["Ảnh realistic"]
+    H --> O
 ```
 
 ---
@@ -809,6 +886,16 @@ Khi inference:
 1. Bắt đầu từ noise ngẫu nhiên.
 2. Denoise từng bước.
 3. Tạo ảnh mới.
+
+### Sơ đồ: forward và reverse diffusion
+
+```mermaid
+flowchart LR
+    X0["x₀<br/>ảnh thật"] -->|thêm noise| X1["x₁"] -->|thêm noise| XT["xₜ<br/>nhiễu nhiều"] -->|đến T bước| XN["xₜ<br/>gần pure noise"]
+    XN -->|denoise| R1["xₜ₋₁"] -->|denoise| R2["..."] -->|denoise| OUT["x₀′<br/>ảnh sinh"]
+```
+
+Forward process dùng khi huấn luyện để tạo các mức nhiễu; reverse process được học để sinh ảnh từ noise.
 
 ---
 
@@ -1031,6 +1118,19 @@ Một số vùng ảnh attend tới:
 - `mountain`
 
 Nhờ đó model đưa thông tin text vào quá trình denoise.
+
+### Sơ đồ: pipeline Stable Diffusion
+
+```mermaid
+flowchart TD
+    P["Text prompt"] --> C["CLIP text encoder"] --> E["Text embeddings"]
+    N["Latent noise"] --> U["U-Net denoiser"]
+    E -->|cross-attention| U
+    U --> L["Denoised latent"] --> D["VAE decoder"] --> I["Ảnh đầu ra"]
+    X["Ảnh đầu vào<br/>image-to-image"] --> V["VAE encoder"] --> L
+```
+
+Ở text-to-image, U-Net bắt đầu từ latent noise; ở image-to-image, latent ban đầu được tạo từ ảnh đầu vào rồi mới được denoise theo prompt.
 
 ---
 
@@ -1294,6 +1394,18 @@ ControlNet hữu ích vì diffusion thường thiếu consistency về bố cụ
 
 Với ControlNet, ta ép model giữ structure cụ thể.
 
+### Sơ đồ: ba cách kiểm soát diffusion
+
+```mermaid
+flowchart TD
+    A["Mục tiêu: output theo ý muốn"] --> D["DreamBooth<br/>vài ảnh của subject<br/>fine-tune model"]
+    A --> L["LoRA<br/>học adapter low-rank<br/>model gốc được freeze"]
+    A --> C["ControlNet<br/>ảnh điều kiện<br/>edge · pose · depth"]
+    D --> O["Ảnh được cá nhân hóa / kiểm soát"]
+    L --> O
+    C --> O
+```
+
 ---
 
 # 14. CycleGAN
@@ -1355,6 +1467,20 @@ Discriminator:
 D_Y: phân biệt real Y và fake Y
 D_X: phân biệt real X và fake X
 ```
+
+### Sơ đồ: hai hướng chuyển domain và cycle consistency
+
+```mermaid
+flowchart LR
+    X["Ảnh domain X<br/>horse"] --> G["G: X → Y"] --> FY["Ảnh giả domain Y<br/>zebra"] --> F["F: Y → X"] --> XR["X tái tạo"]
+    Y["Ảnh domain Y<br/>zebra"] --> F --> FX["Ảnh giả domain X<br/>horse"] --> G --> YR["Y tái tạo"]
+    FY --> DY["D_Y<br/>real / fake"]
+    Y --> DY
+    FX --> DX["D_X<br/>real / fake"]
+    X --> DX
+```
+
+Loss cycle khuyến khích `X tái tạo ≈ X` và `Y tái tạo ≈ Y`, còn các discriminator đảm bảo ảnh sau chuyển domain vẫn realistic.
 
 ---
 

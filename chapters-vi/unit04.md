@@ -35,6 +35,17 @@ Trong AI, mô hình unimodal chỉ xử lý một loại dữ liệu, ví dụ:
 - BERT/GPT cho text.
 - Wav2Vec cho audio.
 
+```mermaid
+flowchart LR
+    W["Thế giới thực"] --> V["Vision<br/>ảnh / video"]
+    W --> T["Text<br/>câu hỏi / caption"]
+    W --> A["Audio<br/>âm thanh"]
+    V --> F["Multimodal fusion"]
+    T --> F
+    A --> F
+    F --> O["Hiểu biết đầy đủ hơn"]
+```
+
 Mô hình multimodal xử lý nhiều loại dữ liệu cùng lúc, ví dụ:
 
 - Ảnh + câu hỏi → câu trả lời.
@@ -77,10 +88,13 @@ Ví dụ:
 
 Một mô hình Vision-Language thường gồm:
 
-```text
-Image ──> Vision Encoder ──┐
-                            ├──> Fusion / Alignment module ──> Output
-Text  ──> Text Encoder ────┘
+```mermaid
+flowchart LR
+    I["Image"] --> V["Vision encoder"]
+    T["Text"] --> E["Text encoder"]
+    V --> F["Fusion / alignment"]
+    E --> F
+    F --> O["Output<br/>classification · retrieval · generation"]
 ```
 
 Các thành phần chính:
@@ -128,6 +142,17 @@ Ví dụ điển hình: CLIP.
 ### Hybrid fusion
 
 Kết hợp cả hai cách.
+
+Có thể tóm tắt ba chiến lược như sau:
+
+```mermaid
+flowchart LR
+    I["Image features"] --> F{"Fusion strategy"}
+    T["Text features"] --> F
+    F --> E["Early fusion<br/>ghép token sớm"]
+    F --> L["Late fusion<br/>so sánh embedding"]
+    F --> H["Hybrid fusion<br/>kết hợp hai cách"]
+```
 
 ---
 
@@ -181,6 +206,17 @@ image_3    sai      sai     đúng
 
 Mục tiêu là làm similarity trên đường chéo chính cao, các ô còn lại thấp.
 
+Có thể hình dung ma trận similarity như một bảng điểm, trong đó đường chéo chính là các cặp đúng:
+
+```mermaid
+flowchart TD
+    B["Batch gồm N cặp image-text"] --> S["Ma trận similarity N × N"]
+    S --> P["Đường chéo chính<br/>cặp đúng: similarity cao"]
+    S --> N["Ngoài đường chéo<br/>cặp sai: similarity thấp"]
+    P --> L["Symmetric cross-entropy loss"]
+    N --> L
+```
+
 ## 5.2 Generative objective
 
 Mô hình học cách sinh dữ liệu.
@@ -204,6 +240,16 @@ Ví dụ:
 - Local: vùng ảnh “red apple” khớp với cụm từ “red apple”.
 
 Task như visual grounding cần alignment local rất tốt.
+
+```mermaid
+flowchart TD
+    P["Cặp image-text"] --> C["Contrastive<br/>cặp đúng gần, cặp sai xa"]
+    P --> G["Generative<br/>sinh caption / answer"]
+    P --> A["Alignment<br/>global hoặc local"]
+    C --> R["Vision-language representation"]
+    G --> R
+    A --> R
+```
 
 ---
 
@@ -235,9 +281,13 @@ CLIP là viết tắt của **Contrastive Language-Image Pre-training**.
 
 CLIP gồm hai encoder độc lập:
 
-```text
-Image ──> Image Encoder ──> Image Embedding
-Text  ──> Text Encoder  ──> Text Embedding
+```mermaid
+flowchart LR
+    I["Image"] --> IE["Image encoder"] --> IV["Image embedding"]
+    T["Text prompt"] --> TE["Text encoder"] --> TV["Text embedding"]
+    IV --> S["Cosine similarity"]
+    TV --> S
+    S --> Z["Zero-shot probabilities"]
 ```
 
 Sau đó tính cosine similarity giữa image embedding và text embedding.
@@ -398,9 +448,12 @@ Với hệ thống search thật, thường làm như sau:
 
 VQA là task:
 
-```text
-Input: ảnh + câu hỏi
-Output: câu trả lời
+```mermaid
+flowchart LR
+    I["Ảnh"] --> V["VQA model"]
+    Q["Câu hỏi"] --> V
+    V --> A["Câu trả lời"]
+    V --> R["Visual reasoning<br/>đếm · so sánh · quan hệ"]
 ```
 
 Ví dụ:
@@ -654,9 +707,13 @@ không mô tả đúng nội dung ảnh.
 
 BLIP dùng cơ chế **CapFilt**, gồm:
 
-```text
-Captioner: sinh caption tốt hơn cho ảnh
-Filter: lọc cặp ảnh-text nhiễu
+```mermaid
+flowchart LR
+    W["Web image-text pairs<br/>nhiễu"] --> C["Captioner<br/>sinh caption mới"]
+    W --> F["Filter"]
+    C --> F
+    F --> D["Cặp dữ liệu sạch hơn"]
+    D --> P["BLIP pre-training"]
 ```
 
 Cách này cho thấy chất lượng dữ liệu quan trọng hơn chỉ tăng kích thước dataset.
@@ -782,10 +839,15 @@ Sau đó fine-tune cho object detection.
 
 Khác với CLIP chỉ tạo một embedding cho toàn ảnh, OWL-ViT tạo embedding cho từng image token/patch.
 
-```text
-Image patches ──> token embeddings ──> object embeddings
-                                    ├── classification với text query
-                                    └── box prediction bằng MLP
+```mermaid
+flowchart LR
+    I["Image"] --> P["Image patches"] --> E["Object embeddings"]
+    T["Text queries"] --> TE["Text encoder"]
+    E --> M["Image-text matching"]
+    TE --> M
+    M --> C["Class / query label"]
+    E --> B["Box head (MLP)"]
+    B --> O["Bounding boxes"]
 ```
 
 ## 15.2 Dùng OWL-ViT
@@ -900,10 +962,12 @@ Stable Diffusion dùng **latent diffusion**:
 
 Thành phần chính:
 
-```text
-Text prompt ──> CLIP text encoder ──┐
-                                    ├── UNet denoising in latent space ──> VAE decoder ──> Image
-Noise latent ───────────────────────┘
+```mermaid
+flowchart LR
+    P["Text prompt"] --> T["CLIP text encoder"]
+    N["Noise latent"] --> U["UNet denoising<br/>latent space"]
+    T --> U
+    U --> L["Denoised latent"] --> V["VAE decoder"] --> I["Generated image"]
 ```
 
 Ví dụ dùng Diffusers:
@@ -990,6 +1054,19 @@ Ví dụ: MAGiC.
 ---
 
 # 18. Transfer learning trong multimodal models
+
+Có thể chọn chiến lược theo lượng dữ liệu gán nhãn và mức độ khác biệt của domain:
+
+```mermaid
+flowchart TD
+    A["Task mới"] --> B{"Có pretrained model phù hợp?"}
+    B -->|"Không"| C["Train from scratch"]
+    B -->|"Có"| D{"Có dữ liệu gán nhãn?"}
+    D -->|"Không / rất ít"| E["Zero-shot / few-shot"]
+    D -->|"Có"| F{"Domain có khác nhiều?"}
+    F -->|"Không"| G["Fine-tuning nhẹ<br/>hoặc freeze backbone"]
+    F -->|"Có"| H["Fine-tuning thận trọng<br/>LR nhỏ · LoRA · adapters"]
+```
 
 Có 3 cách dùng model cho task mới:
 

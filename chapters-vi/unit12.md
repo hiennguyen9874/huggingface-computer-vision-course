@@ -59,18 +59,15 @@ Hệ thống này dùng các nhãn thuộc nhóm `"person"` trong ImageNet.
 
 Pipeline kỹ thuật đơn giản như sau:
 
-```text
-Input image
-    ↓
-Face detector tìm khuôn mặt
-    ↓
-Crop hoặc lấy vùng chứa mặt
-    ↓
-Đưa vào model classification huấn luyện bằng Caffe
-    ↓
-Model trả về nhãn thuộc nhóm "person"
-    ↓
-Hiển thị bounding box + label dự đoán
+### Sơ đồ pipeline của ImageNet Roulette
+
+```mermaid
+flowchart LR
+    A["Ảnh đầu vào"] --> B["Face detector<br/>tìm khuôn mặt"]
+    B --> C["Crop vùng mặt"]
+    C --> D["Caffe classifier"]
+    D --> E["Nhãn trong nhóm<br/>person"]
+    E --> F["Bounding box +<br/>label dự đoán"]
 ```
 
 Pseudo-code:
@@ -125,6 +122,27 @@ Nguồn gốc bias đến từ:
 - Cách dùng WordNet làm hệ phân loại.
 - Thiếu kiểm tra đạo đức ở nhóm label `"person"`.
 - Thiếu đánh giá tác động với các nhóm người bị ảnh hưởng.
+
+### Sơ đồ: bias có thể xuất hiện ở đâu?
+
+Bias có thể được đưa vào hệ thống trước cả khi model bắt đầu học và tiếp tục phát sinh sau khi deploy:
+
+```mermaid
+flowchart LR
+    A["Thu thập dữ liệu"] --> B["Taxonomy và class"]
+    B --> C["Annotation"]
+    C --> D["Training model"]
+    D --> E["Evaluation"]
+    E --> F["Deployment"]
+    F --> G["Phản hồi và monitoring"]
+    A -.-> H["Bias"]
+    B -.-> H
+    C -.-> H
+    D -.-> H
+    E -.-> H
+    F -.-> H
+    G -.-> H
+```
 
 ---
 
@@ -210,6 +228,17 @@ Kết quả:
 - Synset không an toàn: 1,593.
 - Synset tạm xem an toàn: 1,239.
 - Khoảng 600,000 ảnh bị loại bỏ sau khi lọc.
+
+### Biểu đồ: kết quả phân loại synset
+
+```mermaid
+pie showData
+    title Phân loại 2.832 synset trong nhánh person
+    "Không an toàn" : 1593
+    "Tạm xem an toàn" : 1239
+```
+
+Biểu đồ chỉ thể hiện tỷ lệ synset; con số khoảng 600.000 là số ảnh bị loại bỏ nên không cộng vào biểu đồ này.
 
 ---
 
@@ -420,6 +449,18 @@ Các yếu tố cần quan tâm:
 5. **Damage control**  
    Nếu deepfake đã lan truyền, thiệt hại thường đã xảy ra. Vì vậy phòng ngừa quan trọng hơn sửa sai sau đó.
 
+### Sơ đồ: cùng một công nghệ, hai hướng tác động
+
+```mermaid
+flowchart TD
+    A["Deep generative CV model"] --> B{"Mục đích sử dụng"}
+    B -->|Có consent, minh bạch| C["Ứng dụng sáng tạo và giáo dục"]
+    B -->|Thiếu consent, đánh lừa| D["Deepfake gây hại"]
+    C --> E["Tăng tương tác và khả năng tiếp cận"]
+    D --> F["Misinformation, lừa đảo,<br/>tổn hại danh tiếng"]
+    F --> G["Thiệt hại xảy ra trước<br/>khi có thể đính chính"]
+```
+
 ---
 
 # 7. Ethics và Bias trong AI là gì?
@@ -606,6 +647,18 @@ Kết quả:
 
 Accuracy tổng thể có thể cao, nhưng một nhóm cụ thể có thể bị lỗi nhiều hơn.
 
+### Biểu đồ: accuracy theo subgroup trong ví dụ trên
+
+```mermaid
+xychart-beta
+    title "Accuracy theo subgroup (ví dụ)"
+    x-axis ["A", "B"]
+    y-axis "Accuracy (%)" 0 --> 100
+    bar [50, 100]
+```
+
+Đây chỉ là số liệu minh họa từ đoạn code trên: nhóm A đạt 50%, nhóm B đạt 100%. Không nên suy ra hiệu năng thực tế nếu chưa đo trên dataset đủ lớn.
+
 ---
 
 ## 9.4 Deployment
@@ -680,9 +733,39 @@ Ví dụ:
 - Hugging Face for Education.
 - Data Measurement Tool.
 
+### Sơ đồ: ba trụ cột của Good ML
+
+```mermaid
+flowchart TD
+    A["Good ML"] --> B["Collaboration"]
+    A --> C["Transparency"]
+    A --> D["Responsibility"]
+    B --> B1["Model Cards<br/>Evaluation on the Hub<br/>Community discussion"]
+    C --> C1["Nguồn dữ liệu<br/>quy trình train<br/>hiệu năng và giới hạn"]
+    D --> D1["Impact assessment<br/>Audit<br/>Data Measurement Tool"]
+```
+
 ---
 
 # 11. Sáu nhóm Hugging Face Spaces liên quan đến đạo đức
+
+### Bản đồ sáu nhóm Responsible AI Spaces
+
+```mermaid
+flowchart TD
+    A["Responsible AI Spaces"] --> B["Rigorous"]
+    A --> C["Consentful"]
+    A --> D["Socially Conscious"]
+    A --> E["Sustainable"]
+    A --> F["Inclusive"]
+    A --> G["Inquisitive"]
+    B --> B1["Failure cases<br/>subgroup benchmark"]
+    C --> C1["Consent<br/>quyền tự quyết"]
+    D --> D1["Y tế, khí hậu,<br/>accessibility"]
+    E --> E1["Emission<br/>quantization, distillation"]
+    F --> F1["Đa dạng dữ liệu<br/>ngôn ngữ ít tài nguyên"]
+    G --> G1["Phản biện quyền lực<br/>và tác hại của AI"]
+```
 
 ## 11.1 Rigorous
 

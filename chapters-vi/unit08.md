@@ -26,6 +26,16 @@ Các ứng dụng chính:
 - AR/VR/MR: đặt vật thể ảo vào thế giới thật.
 - Gaming/Entertainment: motion capture, dựng môi trường 3D.
 
+### Trực quan: 3D khác video ở chiều thứ ba
+
+```mermaid
+flowchart LR
+    I["Ảnh 2D<br/>x, y"] --> V["Video<br/>x, y, t"]
+    I --> D["Dữ liệu 3D<br/>x, y, z"]
+    V --> VT["t là chiều thời gian"]
+    D --> DT["z là chiều không gian"]
+```
+
 ---
 
 # 2. Lịch sử ngắn của 3D Vision
@@ -276,6 +286,17 @@ result = combined @ points
 
 Điểm quan trọng: thứ tự nhân ma trận rất quan trọng. Ma trận bên phải được áp dụng trước.
 
+### Sơ đồ thứ tự biến đổi
+
+```mermaid
+flowchart LR
+    P["Điểm ban đầu"] --> T["Tịnh tiến<br/>T"]
+    T --> S["Co giãn<br/>S"]
+    S --> R["Xoay<br/>R"]
+    R --> O["Điểm kết quả"]
+    M["M = R @ S @ T<br/>ma trận bên phải áp dụng trước"] -.-> O
+```
+
 ---
 
 # 5. Camera Model
@@ -377,6 +398,17 @@ Hay:
 \[
 p_{image} = K \cdot T_{world \to camera} \cdot p_{world}
 \]
+
+### Pipeline chiếu từ 3D xuống pixel
+
+```mermaid
+flowchart LR
+    W["World point<br/>p_world"] --> T["World-to-camera<br/>transform"]
+    T --> C["Camera coordinates<br/>p_camera"]
+    C --> K["Intrinsic matrix<br/>K"]
+    K --> H["Homogeneous division<br/>u/w, v/w"]
+    H --> P["Pixel coordinates<br/>u, v"]
+```
 
 ---
 
@@ -519,6 +551,16 @@ SDF cho biết khoảng cách gần nhất đến bề mặt.
 - Có thể ray tracing bằng sphere tracing.
 - Dùng nhiều trong neural rendering và reconstruction.
 
+### Bản đồ chọn representation
+
+```mermaid
+flowchart TD
+    Q["Cần biểu diễn gì?"] --> P["Các điểm đo rời rạc<br/>Point cloud"]
+    Q --> M["Bề mặt có topology<br/>Mesh"]
+    Q --> V["Density hoặc dữ liệu thể tích<br/>Voxel / volume"]
+    Q --> S["Bề mặt liên tục<br/>Implicit surface / SDF"]
+```
+
 ---
 
 # 7. Stereo Vision và đo 3D
@@ -621,6 +663,16 @@ z = \frac{b f_x}{d}
 - Disparity nhỏ → vật xa.
 - Depth tỉ lệ nghịch với disparity.
 
+### Quan hệ disparity và depth
+
+```mermaid
+flowchart LR
+    N["Vật gần"] --> DL["Disparity d lớn"] --> ZL["Depth z nhỏ"]
+    F["Vật xa"] --> DS["Disparity d nhỏ"] --> ZS["Depth z lớn"]
+    E["z = b f_x / d"] -.-> DL
+    E -.-> DS
+```
+
 ---
 
 ## 7.5 Tính tọa độ 3D
@@ -720,6 +772,16 @@ Depth map
 ```
 
 Depth map thường là ảnh một kênh, mỗi pixel biểu diễn khoảng cách từ camera đến điểm tương ứng trong scene.
+
+### Pipeline monocular depth
+
+```mermaid
+flowchart LR
+    I["RGB image"] --> E["Encoder / depth model"]
+    E --> D["Depth map<br/>một giá trị mỗi pixel"]
+    D --> M["Metric depth<br/>đơn vị mét"]
+    D --> R["Relative depth<br/>chỉ biết gần / xa"]
+```
 
 ---
 
@@ -917,6 +979,16 @@ Image
   -> dense depth map
 ```
 
+### Sơ đồ kiến trúc Depth Anything V2
+
+```mermaid
+flowchart LR
+    I["Ảnh đầu vào"] --> V["DINOv2 / ViT encoder"]
+    V --> F["Multi-scale features"]
+    F --> D["DPT decoder"]
+    D --> O["Dense depth map"]
+```
+
 ---
 
 ## 9.2 DINOv2 encoder
@@ -1076,6 +1148,17 @@ input image + target viewpoint
   -> novel image
 ```
 
+### Hai hướng giải bài toán NVS
+
+```mermaid
+flowchart TD
+    I["Input image(s)"] --> C{"Cách tạo novel view"}
+    C --> R["Representation 3D trung gian<br/>PixelNeRF, LRM"]
+    R --> RR["Render từ camera mới"]
+    C --> G["Sinh ảnh trực tiếp<br/>Zero123, 3DiM"]
+    G --> GI["Ảnh mới từ viewpoint mục tiêu"]
+```
+
 ---
 
 ## 10.4 PixelNeRF
@@ -1218,6 +1301,20 @@ Trong đó:
 5. So sánh với màu pixel thật.
 
 6. Backprop cập nhật MLP.
+
+### Vòng lặp render và học của NeRF
+
+```mermaid
+flowchart LR
+    P["Pixel + camera pose"] --> R["Camera ray<br/>r(t) = o + td"]
+    R --> S["Sample các điểm x_i"]
+    S --> N["NeRF MLP<br/>(x_i, d) → (c_i, σ_i)"]
+    N --> V["Volume rendering"]
+    V --> O["Rendered RGB"]
+    O --> L["Loss so với ground truth"]
+    L --> B["Backprop cập nhật Θ"]
+    B -.-> N
+```
 
 ---
 

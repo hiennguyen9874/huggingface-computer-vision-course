@@ -14,6 +14,20 @@ Mỗi task khác nhau ở mức độ chi tiết của đầu ra:
 | Object Detection | Một ảnh | Bounding box + class label + confidence |
 | Image Segmentation | Một ảnh | Mask theo từng pixel |
 
+## Bản đồ mức độ chi tiết của đầu ra
+
+Ba task có thể xem như ba mức trả lời cho cùng một câu hỏi: model cần hiểu ảnh đến mức nào?
+
+```mermaid
+flowchart LR
+    I["Một ảnh"] --> C["Classification<br/>Ảnh này là gì?"]
+    I --> D["Detection<br/>Có gì và ở đâu?"]
+    I --> S["Segmentation<br/>Mỗi pixel thuộc về đâu?"]
+    C --> CO["Nhãn cho toàn ảnh"]
+    D --> DO["Box + nhãn + confidence"]
+    S --> SO["Mask theo từng pixel"]
+```
+
 ---
 
 # 1. Image Classification
@@ -45,6 +59,13 @@ horse: 0.05
 ```
 
 Class có xác suất cao nhất là dự đoán cuối cùng.
+
+```mermaid
+flowchart LR
+    I["Ảnh"] --> M["Image classifier"]
+    M --> P["Xác suất theo class"]
+    P --> O["Class có score cao nhất"]
+```
 
 ## Code ví dụ với Hugging Face
 
@@ -138,6 +159,21 @@ box = {
     "ymax": 160
 }
 ```
+
+## Trực quan hóa kết quả Object Detection
+
+Trong khi classification chỉ trả về nhãn cho toàn ảnh, detection ghép hai đầu ra là class và vị trí. Mỗi box có thể đi kèm một confidence score.
+
+```mermaid
+flowchart LR
+    I["Ảnh"] --> C["Classification<br/>car / person / dog"]
+    I --> L["Localization<br/>tọa độ bounding box"]
+    C --> O["Detection result"]
+    L --> O
+    O --> R["box + label + score"]
+```
+
+![Ví dụ object detection với bounding box và confidence score](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/Object_Detection.png)
 
 ## Object Detection khác Classification thế nào?
 
@@ -299,6 +335,16 @@ Trong đó:
 - Intersection: phần giao nhau giữa predicted box và ground-truth box.
 - Union: tổng vùng bao phủ bởi cả hai box.
 
+```mermaid
+flowchart LR
+    P["Predicted box"] --> G["Tính vùng giao nhau<br/>Intersection"]
+    T["Ground-truth box"] --> G
+    P --> U["Tính vùng hợp<br/>Union"]
+    T --> U
+    G --> I["IoU = Intersection / Union"]
+    U --> I
+```
+
 Ví dụ:
 
 ```text
@@ -390,6 +436,17 @@ rồi lấy trung bình.
 - Precision/Recall đo chất lượng phát hiện.
 - mAP tổng hợp cả localization và classification.
 
+### Quy trình tính mAP
+
+```mermaid
+flowchart LR
+    P["Predictions + ground truth"] --> T["Chọn IoU threshold"]
+    T --> M["Ghép prediction với ground truth"]
+    M --> PR["Precision / Recall"]
+    PR --> AP["Average Precision theo class"]
+    AP --> MAP["mAP: trung bình nhiều class và threshold"]
+```
+
 ---
 
 # 6. Image Segmentation
@@ -435,6 +492,8 @@ Ví dụ ảnh kích thước `512 x 512`, segmentation mask cũng thường là
 4 = sky
 ```
 
+![Ví dụ image segmentation với mask cho các vùng trong ảnh](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/segmentation-example.png)
+
 ---
 
 # 7. Các loại Image Segmentation
@@ -444,6 +503,16 @@ Nội dung unit nhấn mạnh ba loại segmentation chính:
 1. Semantic Segmentation.
 2. Instance Segmentation.
 3. Panoptic Segmentation.
+
+```mermaid
+flowchart TD
+    I["Ảnh"] --> S["Segmentation"]
+    S --> SS["Semantic<br/>class cho từng pixel"]
+    S --> IS["Instance<br/>mask riêng cho từng object"]
+    S --> PS["Panoptic<br/>class + instance"]
+```
+
+![So sánh semantic, instance và panoptic segmentation](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/segmentation-types.png)
 
 ---
 
@@ -618,6 +687,16 @@ Mục tiêu:
 
 U-Net thường dùng **skip connections** để nối feature ở encoder sang decoder, giúp giữ lại chi tiết không gian.
 
+```mermaid
+flowchart LR
+    I["Ảnh đầu vào<br/>512×512"] --> E1["Encoder 1<br/>256×256"] --> E2["Encoder 2<br/>128×128"] --> B["Bottleneck<br/>64×64"]
+    B --> D2["Decoder 2<br/>128×128"] --> D1["Decoder 1<br/>256×256"] --> O["Mask đầu ra<br/>512×512"]
+    E2 -.->|skip connection| D2
+    E1 -.->|skip connection| D1
+```
+
+Sơ đồ cho thấy encoder học context ở độ phân giải thấp, còn decoder khôi phục mask; skip connection đưa chi tiết không gian trở lại decoder.
+
 ---
 
 ## Vision Transformer-based Segmentation
@@ -655,6 +734,15 @@ Prompt có thể là:
 ## Zero-shot transfer
 
 SAM có thể xử lý ảnh hoặc domain mới mà không cần fine-tune trực tiếp trên dataset đó.
+
+```mermaid
+flowchart LR
+    I["Ảnh mới"] --> E["Image encoder"]
+    P["Prompt<br/>point / box / mask"] --> PE["Prompt encoder"]
+    E --> D["Mask decoder"]
+    PE --> D
+    D --> O["Mask ứng viên"]
+```
 
 ---
 
@@ -711,6 +799,14 @@ Các metric phổ biến:
 2. Pixel Accuracy.
 3. Dice Coefficient.
 
+```mermaid
+flowchart TD
+    Q["Cần đánh giá segmentation"] --> I["IoU<br/>overlap giữa mask"]
+    Q --> P["Pixel Accuracy<br/>đúng bao nhiêu pixel"]
+    Q --> D["Dice<br/>nhạy với overlap vùng nhỏ"]
+    P -.->|cẩn thận class imbalance| W["Không dùng một metric duy nhất"]
+```
+
 ---
 
 ## 11.1 IoU cho Segmentation
@@ -744,6 +840,8 @@ def mask_iou(pred_mask, true_mask):
 ## Vì sao IoU quan trọng?
 
 IoU ít bị ảnh hưởng hơn bởi class imbalance so với accuracy.
+
+![Minh họa Intersection over Union cho segmentation](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/iou.png)
 
 Ví dụ ảnh y tế có 99% background và 1% vùng bệnh. Model đoán toàn background có thể đạt accuracy rất cao, nhưng IoU vùng bệnh sẽ rất thấp.
 
@@ -779,6 +877,8 @@ Ví dụ:
 
 Vì vậy, không nên chỉ dùng Pixel Accuracy.
 
+![Minh họa Pixel Accuracy trong segmentation](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/pixel-accuracy.png)
+
 ---
 
 ## 11.3 Dice Coefficient
@@ -808,6 +908,8 @@ def dice_coefficient(pred_mask, true_mask):
 ```
 
 Dice thường được dùng nhiều trong ảnh y tế vì nhạy với vùng nhỏ.
+
+![Minh họa Dice Coefficient trong segmentation](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/dice-coefficient.png)
 
 ---
 

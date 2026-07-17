@@ -46,6 +46,17 @@ Unit 13 giới thiệu một số hướng thay thế hoặc cải tiến:
 | **RetNet / RMT / ViR** | Thay attention bằng retention mechanism |
 | **Hiera** | Giữ Transformer đơn giản, dùng pretraining tốt thay vì thêm module phức tạp |
 
+### Sơ đồ: số token tăng làm attention đắt hơn
+
+```mermaid
+flowchart LR
+    A["224×224, patch 16×16<br/>196 tokens"] --> B["Attention: 196²<br/>≈ 38 nghìn điểm"]
+    C["1024×1024, patch 8×8<br/>16.384 tokens"] --> D["Attention: 16.384²<br/>≈ 268 triệu điểm"]
+    D --> E["Memory và compute tăng mạnh"]
+```
+
+Sơ đồ này cho thấy vì sao Unit 13 tập trung vào các operator có chi phí dưới bậc hai, retention hoặc cách đơn giản hóa kiến trúc.
+
 ---
 
 # 2. Hyena
@@ -67,6 +78,10 @@ Hyena được xây dựng bằng cách kết hợp:
 2. **Implicit parametrization**
 3. **Element-wise gating**
 4. **Recursive mixing giữa nhiều projection**
+
+Sơ đồ dưới đây tóm tắt cách Hyena thay attention bằng long convolution và gating:
+
+![So sánh Transformer và Hyena](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/outlook_hyena_images/transformer2hyena.png)
 
 ---
 
@@ -304,6 +319,10 @@ def hyena_operator(u):
 - Không tạo ma trận attention \(L \times L\).
 - Dùng convolution toàn cục và gating để thay thế.
 
+Sơ đồ đệ quy giúp thấy rõ các bước convolution và gating được lặp lại như thế nào:
+
+![Cơ chế đệ quy của Hyena](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/outlook_hyena_images/hyena_recurence.png)
+
 ---
 
 ## 2.8. Hyena trong computer vision
@@ -329,6 +348,12 @@ Lợi ích chính:
 - giảm GPU memory,
 - xử lý sequence dài tốt hơn,
 - vẫn giữ khả năng modeling toàn cục.
+
+Các hình dưới đây minh họa kết quả trên vision và mức tiết kiệm GPU memory khi số lượng patch tăng:
+
+![Benchmark Hyena trong computer vision](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/outlook_hyena_images/hyena_vision_benchmarks.png)
+
+![So sánh ViT và HyenaViT](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/outlook_hyena_images/vit_vs_hyenavit.png)
 
 ---
 
@@ -428,6 +453,10 @@ Nhược điểm:
 - reconstruct pixel có thể khiến model tập trung vào chi tiết thấp cấp,
 - tốn compute,
 - cần nhiều dữ liệu để học tốt.
+
+Hình dưới đây so sánh ba mục tiêu: học bất biến giữa các view, tái tạo pixel và dự đoán embedding của I-JEPA:
+
+![So sánh các phương pháp self-supervised và I-JEPA](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/i-jepa-1.png)
 
 ---
 
@@ -536,6 +565,10 @@ Loss có dạng:
 \mathcal{L} = || \hat{z}_y - z_y ||^2
 \]
 
+Sơ đồ kiến trúc đầy đủ cho thấy context encoder cung cấp thông tin quan sát, còn predictor dự đoán representation của target encoder:
+
+![Sơ đồ hoạt động của I-JEPA](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/i-jepa-2.png)
+
 ---
 
 ## 3.6. Multi-block masking
@@ -624,6 +657,10 @@ Mục tiêu giải quyết ba vấn đề:
 Thành phần chính là:
 
 **Multi-Scale Retention — MSR**
+
+RetNet cân bằng ba mục tiêu: train song song, inference recurrent và xử lý chuỗi dài theo chunk. Có thể hình dung mối quan hệ này như sau:
+
+![Ba thách thức RetNet giải quyết](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/LLM%20Challenges.png)
 
 ---
 
@@ -748,6 +785,10 @@ hoặc có thể hiểu là attention score bị điều chỉnh bởi distance 
 
 Trong đó \(D_{ij}\) phụ thuộc vào khoảng cách Manhattan giữa token \(i\) và token \(j\).
 
+Hình sau minh họa sự khác nhau giữa attention thông thường và attention có spatial decay:
+
+![So sánh attention thông thường và Manhattan Self-Attention](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/Attention%20Comparison.png)
+
 ---
 
 ## 4.7. Decomposed Manhattan Self-Attention — MaSAD
@@ -768,6 +809,8 @@ Lợi ích:
 
 Đây là kỹ thuật tương tự các ý tưởng axial attention, nhưng được thiết kế với Manhattan decay.
 
+![Phân rã Manhattan Self-Attention theo hai trục](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/MaSAD.png)
+
 ---
 
 ## 4.8. RMT khác RetNet gốc thế nào?
@@ -783,11 +826,15 @@ RMT:
 
 Theo nội dung tài liệu, tác giả so sánh MaSA với các representation khác của RetNet và cho thấy MaSA có throughput tốt và accuracy cao.
 
+![So sánh MaSA với các dạng retention](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/MaSA%20vs%20Retention.png)
+
 ---
 
 # 4.9. ViR — Vision Retention Networks
 
 ViR là một vision backbone khác lấy cảm hứng từ RetNet.
+
+![Kiến trúc Vision Retention Networks](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/ViR.png)
 
 Kiến trúc tổng thể khá giống ViT, nhưng thay:
 
@@ -845,6 +892,8 @@ Thông điệp chính của Hiera:
 
 > Nếu pretraining task đủ mạnh, model có thể học spatial reasoning mà không cần nhồi thêm quá nhiều inductive bias vào kiến trúc.
 
+![Kiến trúc phân cấp của Hiera](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/hiera_images/hiera_architecture.png)
+
 ---
 
 ## 5.2. CNN, ViT và hierarchical representation
@@ -887,6 +936,10 @@ Nhưng các thành phần này làm model:
 - khó scale hơn,
 - khó triển khai hơn.
 
+Sơ đồ sau giúp trực quan hóa sự thay đổi từ resolution cao/channel thấp ở stage đầu sang resolution thấp/channel cao ở stage sâu:
+
+![Đặc điểm phân cấp của CNN](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/hiera_images/CNN_architecture.webp)
+
 ---
 
 ## 5.3. Hiera bắt đầu từ MViTv2
@@ -901,6 +954,8 @@ Nó học multi-scale representation bằng cách:
 - deeper stage: spatial resolution thấp, channel cao.
 
 Giống CNN nhưng dùng transformer.
+
+![Các stage của MViTv2](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/hiera_images/mvitv2.png)
 
 ---
 
@@ -950,6 +1005,10 @@ Theo nội dung tài liệu, thay đổi này giúp tăng tốc đáng kể:
 - khoảng 22% cho ảnh,
 - khoảng 27% cho video.
 
+Biểu đồ dưới đây tổng hợp các thay đổi từ MViTv2 sang Hiera và ảnh hưởng của chúng đến accuracy, tốc độ trên ảnh và video:
+
+![Các thay đổi từ MViTv2 sang Hiera](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/hiera_images/hiera_changes.png)
+
 ---
 
 ## 5.6. MAE trong Hiera
@@ -980,6 +1039,8 @@ Decoder reconstructs:
 ```
 
 MAE buộc model học cấu trúc không gian và ngữ nghĩa ảnh.
+
+![Quy trình Masked Autoencoder](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/hiera_images/mae.png)
 
 Hiera dùng MAE như một pretext task mạnh, nhờ đó kiến trúc có thể đơn giản hơn.
 

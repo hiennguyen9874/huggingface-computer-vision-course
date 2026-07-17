@@ -13,6 +13,15 @@ Các vấn đề thường gặp khi deployment:
 
 Vì vậy, trước khi deployment thường cần thêm bước **model optimization**.
 
+### Sơ đồ: từ training đến deployment
+
+```mermaid
+flowchart LR
+    T["Train trên GPU mạnh"] --> O["Optimize<br/>giảm size, latency, resource"]
+    O --> D["Deploy lên target hardware"]
+    H["Mobile / edge / IoT<br/>tài nguyên hạn chế"] --> O
+```
+
 ---
 
 # 1. Model Optimization là gì?
@@ -121,6 +130,17 @@ Không phải cứ có model PyTorch là chạy tốt ở mọi nơi. Thường 
 
 # 3. Các kỹ thuật tối ưu mô hình quan trọng
 
+### Bản đồ các kỹ thuật tối ưu
+
+```mermaid
+flowchart TD
+    M["Model đã train"] --> G{"Mục tiêu tối ưu"}
+    G --> P["Giảm tham số<br/>Pruning"]
+    G --> Q["Giảm độ chính xác số<br/>Quantization"]
+    G --> K["Model nhỏ hơn<br/>Knowledge distillation"]
+    G --> L["Giảm phép tính<br/>Low-rank approximation"]
+```
+
 ## 3.1 Pruning
 
 **Pruning** là kỹ thuật loại bỏ các kết nối, weight, neuron hoặc channel ít quan trọng trong mô hình.
@@ -135,6 +155,8 @@ Sau pruning:
 - Ít phép tính hơn.
 - Có thể inference nhanh hơn.
 - Nhưng accuracy có thể giảm nếu prune quá mạnh.
+
+![Minh họa pruning: loại bỏ các kết nối ít quan trọng trong mô hình](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/pruning.png)
 
 Ví dụ đơn giản:
 
@@ -314,6 +336,8 @@ Trong đó:
 - `temperature`: làm mềm phân phối xác suất.
 - `alpha`: cân bằng giữa học từ label thật và học từ teacher.
 
+![Minh họa knowledge distillation giữa teacher model và student model](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/knowledge_distillation.png)
+
 ---
 
 ## 3.4 Low-rank approximation
@@ -369,6 +393,8 @@ Không có tối ưu nào miễn phí. Thường phải đánh đổi giữa:
 
 Accuracy là độ đúng của mô hình.
 
+![Quan hệ giữa model size và accuracy](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/model_size_vs_accuracy.png)
+
 Model lớn thường có accuracy cao hơn nhưng:
 
 - Chậm hơn.
@@ -379,6 +405,8 @@ Model lớn thường có accuracy cao hơn nhưng:
 ## 4.2 Performance / Latency
 
 Latency là thời gian model xử lý một request hoặc một ảnh.
+
+![Quan hệ giữa accuracy và latency](https://huggingface.co/datasets/hf-vision/course-assets/resolve/main/accuracy_vs_latency.png)
 
 Latency thấp quan trọng với:
 
@@ -698,11 +726,32 @@ Edge TPU compiler
 Run on Edge TPU device
 ```
 
+### Sơ đồ chọn công cụ theo target hardware
+
+```mermaid
+flowchart LR
+    M["Model đã train"] --> H{"Target hardware / runtime"}
+    H --> N["NVIDIA GPU<br/>TensorRT"]
+    H --> I["Intel CPU/GPU/VPU<br/>OpenVINO"]
+    H --> E["Edge/mobile<br/>TFLite / Edge TPU"]
+    H --> O["Đa nền tảng<br/>ONNX Runtime"]
+```
+
 ---
 
 # 6. Deployment platform
 
 Có ba hướng deployment chính: cloud, edge và mobile.
+
+### Sơ đồ chọn deployment platform
+
+```mermaid
+flowchart TD
+    I["Ảnh / video từ người dùng"] --> P{"Nơi chạy inference"}
+    P --> C["Cloud<br/>dễ scale, cần network"]
+    P --> E["Edge<br/>latency thấp, offline"]
+    P --> M["Mobile<br/>on-device, tiết kiệm privacy"]
+```
 
 ---
 
@@ -882,6 +931,16 @@ Dockerfile
 
 > Model file một mình thường chưa đủ để production chạy đúng.
 
+### Sơ đồ đóng gói model
+
+```mermaid
+flowchart LR
+    M["Model đã train"] --> S["Serialize<br/>ONNX / TFLite / .pt"]
+    S --> P["Package"]
+    P --> A["Model + preprocess<br/>+ postprocess + dependencies"]
+    A --> D["Deploy"]
+```
+
 Nếu preprocessing khác lúc train, accuracy production có thể sai nghiêm trọng.
 
 Ví dụ sai phổ biến:
@@ -973,18 +1032,13 @@ Inference là quá trình dùng model đã deploy để tạo output từ input 
 
 Vòng đời đơn giản:
 
-```text
-Client gửi ảnh
-      ↓
-Server nhận request
-      ↓
-Preprocess ảnh
-      ↓
-Run model
-      ↓
-Postprocess output
-      ↓
-Trả kết quả
+```mermaid
+flowchart LR
+    C["Client gửi ảnh"] --> S["Server nhận request"]
+    S --> P["Preprocess"]
+    P --> R["Run model"]
+    R --> O["Postprocess"]
+    O --> A["Trả kết quả"]
 ```
 
 Với Computer Vision, postprocess có thể gồm:
@@ -1046,6 +1100,19 @@ Phù hợp khi:
 ## 11.1 MLOps
 
 MLOps áp dụng nguyên tắc DevOps cho Machine Learning.
+
+### Vòng lặp vận hành model trong production
+
+```mermaid
+flowchart LR
+    V["Version code, data, model"] --> T["Train / evaluate"]
+    T --> C["Canary hoặc A/B deploy"]
+    C --> M["Monitor latency, error, drift"]
+    M --> Q{"Có vấn đề?"}
+    Q -->|Không| M
+    Q -->|Có| R["Rollback / retrain"]
+    R --> V
+```
 
 Bao gồm:
 

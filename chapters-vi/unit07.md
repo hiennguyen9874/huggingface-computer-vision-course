@@ -30,6 +30,17 @@ Ví dụ:
 | Image | Spatial information — vật thể, màu sắc, bố cục trong một frame |
 | Video | Spatial + Temporal information — vật thể và sự thay đổi/chuyển động theo thời gian |
 
+### Sơ đồ: video bổ sung chiều thời gian
+
+```mermaid
+flowchart LR
+    F1["Frame 1<br/>H x W x C"] --> V["Video tensor<br/>T x H x W x C"]
+    F2["Frame 2<br/>H x W x C"] --> V
+    F3["Frame ...<br/>H x W x C"] --> V
+    V --> S["Spatial features<br/>H x W x C"]
+    V --> T["Temporal features<br/>thay đổi theo T"]
+```
+
 ---
 
 ## 2. Các thuộc tính quan trọng của video
@@ -78,6 +89,16 @@ Ví dụ video 10 giây:
 
 Với deep learning, thường không xử lý toàn bộ frame mà sẽ **sample** một số frame đại diện.
 
+### Sơ đồ: frame rate ảnh hưởng đến số frame
+
+```mermaid
+flowchart LR
+    A["Video 10 giây<br/>30 fps"] --> A1["300 frames"]
+    B["Video 10 giây<br/>60 fps"] --> B1["600 frames"]
+    A1 --> S["Sampling<br/>chọn frame đại diện"]
+    B1 --> S
+```
+
 ---
 
 ### 2.3 Bitrate
@@ -122,6 +143,16 @@ Các bài toán phổ biến:
 - surveillance analysis: phân tích camera giám sát;
 - autonomous driving: nhận diện đường, vật cản, biển báo;
 - healthcare video analysis: theo dõi bệnh nhân, hỗ trợ phẫu thuật.
+
+### Pipeline cơ bản của video processing
+
+```mermaid
+flowchart LR
+    I["Video đầu vào"] --> D["Decode frames"]
+    D --> S["Sample hoặc chọn clip"]
+    S --> M["Video model<br/>CNN / RNN / Transformer"]
+    M --> O["Task output<br/>nhãn, box, caption hoặc summary"]
+```
 
 ---
 
@@ -195,6 +226,17 @@ Có hai hướng embedding video chính:
 ---
 
 # 6. Hai kỹ thuật token hóa video quan trọng
+
+### So sánh trực quan hai cách token hóa
+
+```mermaid
+flowchart LR
+    V["Video clip<br/>T x H x W x C"] --> U["Uniform Frame Sampling<br/>lấy n_t frame"]
+    U --> UP["Patch 2D từng frame"]
+    UP --> UT["n_t x n_h x n_w tokens"]
+    V --> TB["Tubelet Embedding<br/>khối T' x H' x W'"]
+    TB --> TT["Token 3D<br/>spatial + temporal"]
+```
 
 ## 6.1 Uniform Frame Sampling
 
@@ -361,10 +403,13 @@ Optical flow biểu diễn hướng và tốc độ chuyển động giữa các
 
 Kết quả hai stream được kết hợp để phân loại hành động.
 
-```text
-RGB frames      => Spatial CNN  \
-                                => Fusion => Prediction
-Optical flow    => Temporal CNN /
+```mermaid
+flowchart LR
+    R["RGB frames"] --> S["Spatial CNN<br/>appearance"]
+    F["Optical flow"] --> T["Temporal CNN<br/>motion"]
+    S --> X["Fusion"]
+    T --> X
+    X --> P["Action prediction"]
 ```
 
 Ưu điểm:
@@ -450,12 +495,12 @@ Cụ thể:
 1. 2D convolution học spatial features trong từng frame.
 2. 1D convolution học temporal features giữa các frame.
 
-```text
-Input video
-=> 2D spatial conv
-=> ReLU
-=> 1D temporal conv
-=> output
+```mermaid
+flowchart LR
+    I["Input video"] --> S["2D spatial conv"]
+    S --> R["ReLU"]
+    R --> T["1D temporal conv"]
+    T --> O["Spatio-temporal output"]
 ```
 
 Lợi ích:
@@ -524,6 +569,18 @@ Phù hợp cho:
 - surveillance;
 - skeleton-based motion understanding.
 
+### Sơ đồ: ba hướng CNN video hiện đại
+
+```mermaid
+flowchart TD
+    V["Video data"] --> M["MoCo<br/>self-supervised representation"]
+    V --> X["X3D<br/>lightweight 3D CNN"]
+    S["Skeleton sequence"] --> G["ST-GCN<br/>spatial-temporal graph"]
+    M --> O["Downstream video tasks"]
+    X --> O
+    G --> O
+```
+
 ---
 
 # 8. RNN-based Video Models
@@ -536,11 +593,11 @@ CNN tốt trong việc hiểu từng frame, nhưng không tự nhiên nắm đư
 
 Pipeline phổ biến:
 
-```text
-Frame 1 => CNN => feature 1 \
-Frame 2 => CNN => feature 2  \
-Frame 3 => CNN => feature 3   => LSTM => Prediction
-...
+```mermaid
+flowchart LR
+    F["Frame sequence"] --> C["CNN<br/>spatial features"]
+    C --> L["LSTM<br/>temporal features"]
+    L --> P["Prediction"]
 ```
 
 ---
@@ -741,6 +798,16 @@ O(N^2)
 
 Nên khi số token tăng, chi phí attention tăng rất nhanh.
 
+### Sơ đồ: số token làm chi phí attention tăng
+
+```mermaid
+flowchart LR
+    I["Ảnh<br/>N = 196 tokens"] --> IA["Attention<br/>O(N²)"]
+    V["Video 16 frames<br/>N = 3136 tokens"] --> VA["Attention<br/>xấp xỉ 256 lần chi phí"]
+```
+
+Với cùng kích thước patch, video có số token gấp 16 lần ảnh nên chi phí lý thuyết của self-attention tăng khoảng `16² = 256` lần.
+
 ---
 
 # 10. ViViT — Video Vision Transformer
@@ -769,9 +836,10 @@ Mục tiêu là chuyển video thành chuỗi spatio-temporal tokens.
 
 Model này đưa toàn bộ token không-thời gian vào Transformer.
 
-```text
-All tokens from all frames
-=> one Transformer Encoder
+```mermaid
+flowchart LR
+    T["All spatio-temporal tokens"] --> E["One Transformer Encoder<br/>full attention"]
+    E --> C["Classification"]
 ```
 
 Mỗi token có thể attention tới mọi token khác ở mọi frame.
@@ -811,12 +879,12 @@ Frame embeddings theo thời gian => Temporal Transformer
 
 Pipeline:
 
-```text
-Video
-=> Spatial Encoder per frame
-=> one embedding per frame
-=> Temporal Encoder
-=> classification
+```mermaid
+flowchart LR
+    V["Video frames"] --> S["Spatial Encoder<br/>per frame"]
+    S --> F["One embedding per frame"]
+    F --> T["Temporal Encoder"]
+    T --> C["Classification"]
 ```
 
 Độ phức tạp giảm còn:
@@ -895,6 +963,17 @@ Kết hợp thông tin cục bộ và toàn cục có chọn lọc.
 
 Xử lý riêng từng trục không gian/thời gian.
 
+### Sơ đồ: Divided Space-Time Attention
+
+```mermaid
+flowchart LR
+    Q["Patch query"] --> T["Temporal attention<br/>cùng vị trí qua các frame"]
+    T --> S["Spatial attention<br/>các patch trong cùng frame"]
+    S --> O["Contextualized token"]
+```
+
+Cách tách này tránh cho mỗi token phải attention đồng thời với toàn bộ token không-thời gian.
+
 ---
 
 # 12. Multimodal Video Models
@@ -909,6 +988,18 @@ Video không chỉ có hình ảnh. Một video có thể gồm nhiều modality
 | Motion | chuyển động giữa frame |
 | Depth | thông tin 3D |
 | Sensor | nhiệt độ, biometric, IMU... |
+
+### Sơ đồ: hợp nhất các modality
+
+```mermaid
+flowchart LR
+    V["Visual<br/>frames"] --> E["Multimodal encoder<br/>alignment"]
+    A["Audio"] --> E
+    T["Text / subtitle"] --> E
+    M["Motion / depth / sensor"] --> E
+    E --> R["Joint representation"]
+    R --> O["Retrieval, captioning,<br/>QA hoặc classification"]
+```
 
 Muốn hiểu video tốt, nhiều khi phải kết hợp nhiều modality.
 
@@ -1054,20 +1145,16 @@ Các modality có thể gồm:
 
 Ví dụ:
 
-```text
-image <-> text
-image <-> audio
-image <-> depth
+```mermaid
+flowchart LR
+    I["Image / video"] <--> T["Text"]
+    I <--> A["Audio"]
+    I <--> D["Depth"]
+    T -.-> A2["Audio và text<br/>cùng embedding space"]
+    A -.-> D2["Audio và depth<br/>cùng embedding space"]
 ```
 
-Từ đó model có thể suy ra quan hệ:
-
-```text
-audio <-> text
-audio <-> depth
-```
-
-dù không train trực tiếp trên cặp đó.
+Từ đó model có thể suy ra quan hệ giữa các modality không được ghép cặp trực tiếp, dù không train trực tiếp trên từng cặp đó.
 
 Loss chính thường là InfoNCE.
 
