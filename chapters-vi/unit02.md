@@ -36,6 +36,19 @@ Với ảnh 2D, kernel thường là ma trận như:
 
 Đây là dạng filter phát hiện thay đổi theo phương ngang/dọc, tương tự Prewitt hoặc Sobel.
 
+### Sơ đồ trực quan phép convolution
+
+```mermaid
+flowchart LR
+    A["Dữ liệu đầu vào"] --> B["Kernel / filter<br/>K×K"]
+    B --> C["Trượt theo stride"]
+    A --> C
+    C --> D["Nhân từng phần tử<br/>và cộng tổng"]
+    D --> E["Feature map"]
+```
+
+Mỗi vị trí của feature map là kết quả của kernel trên một vùng cục bộ của dữ liệu đầu vào.
+
 ---
 
 ## 2.2 Các khái niệm quan trọng
@@ -174,6 +187,20 @@ Luồng xử lý:
  -> Softmax
 ```
 
+### Kích thước tensor qua CNN
+
+```mermaid
+flowchart LR
+    A["Ảnh đầu vào<br/>28×28×1"] --> B["Conv2D 32 filter<br/>26×26×32"]
+    B --> C["MaxPooling 2×2<br/>13×13×32"]
+    C --> D["Conv2D 64 filter<br/>11×11×64"]
+    D --> E["MaxPooling 2×2<br/>5×5×64"]
+    E --> F["Flatten<br/>1.600 giá trị"]
+    F --> G["Dense + Softmax<br/>10 class"]
+```
+
+Sơ đồ cho thấy convolution và pooling dần giảm kích thước không gian, đồng thời tăng số channel để biểu diễn đặc trưng phong phú hơn.
+
 ---
 
 ## 2.5 Backpropagation trong CNN
@@ -235,6 +262,18 @@ Ví dụ model đã học ImageNet có thể nhận biết cạnh, texture, mắ
 
 Thay vì train từ đầu, ta dùng model pretrained.
 
+### Luồng transfer learning
+
+```mermaid
+flowchart LR
+    A["Model pretrained<br/>ImageNet"] --> B["Backbone đã học<br/>cạnh, texture, hình dạng"]
+    B --> C["Thay classification head"]
+    C --> D["Dataset và class mới"]
+    D --> E["Dự đoán cho bài toán mới"]
+```
+
+Backbone thường được giữ nguyên hoặc chỉ mở khóa một phần; classification head được điều chỉnh theo số class của dataset mới.
+
 ---
 
 ## 3.2 Fine-tuning là gì?
@@ -242,6 +281,20 @@ Thay vì train từ đầu, ta dùng model pretrained.
 Fine-tuning là tiếp tục huấn luyện một model pretrained trên dữ liệu mới.
 
 Có nhiều mức fine-tuning:
+
+### Các mức fine-tuning
+
+```mermaid
+flowchart TD
+    A["Model pretrained"] --> B["Freeze backbone"]
+    B --> C["Chỉ train classification head"]
+    A --> D["Mở khóa vài block cuối"]
+    D --> E["Fine-tune với learning rate nhỏ"]
+    A --> F["Mở khóa toàn bộ model"]
+    F --> G["Fine-tune khi dữ liệu đủ lớn hoặc domain khác nhiều"]
+```
+
+Mức mở khóa càng rộng thì khả năng thích nghi càng cao, nhưng rủi ro overfitting và chi phí tính toán cũng tăng.
 
 ### Cách 1: chỉ thay classification head
 
@@ -347,6 +400,20 @@ VGG19 gồm:
 - 16 convolution layers;
 - 3 fully connected layers.
 
+### Luồng kiến trúc VGG
+
+```mermaid
+flowchart LR
+    A["Input<br/>224×224×3"] --> B["Conv block 1<br/>64 channel"]
+    B --> C["Conv block 2<br/>128 channel"]
+    C --> D["Conv block 3<br/>256 channel"]
+    D --> E["Conv block 4<br/>512 channel"]
+    E --> F["Conv block 5<br/>512 channel"]
+    F --> G["Fully connected<br/>classifier"]
+```
+
+Sau mỗi block thường có max pooling; số channel tăng dần trong khi kích thước không gian giảm dần.
+
 ---
 
 ## 4.3 Vì sao dùng nhiều kernel 3x3?
@@ -404,6 +471,23 @@ Input
       ↓
  concatenate theo channel
 ```
+
+### Sơ đồ Inception Module
+
+```mermaid
+flowchart LR
+    A["Input<br/>S×S×Cin"] --> B1["1×1 conv"]
+    A --> B2["1×1 giảm channel<br/>→ 3×3 conv"]
+    A --> B3["1×1 giảm channel<br/>→ 5×5 conv"]
+    A --> B4["Max pooling<br/>→ 1×1 conv"]
+    B1 --> C["Concatenate theo channel"]
+    B2 --> C
+    B3 --> C
+    B4 --> C
+    C --> D["Feature map đa scale"]
+```
+
+Các nhánh nhìn vùng không gian khác nhau nhưng được căn chỉnh để có cùng kích thước không gian trước khi nối lại.
 
 Ý tưởng: ảnh có object ở nhiều scale khác nhau, nên model nên nhìn bằng nhiều receptive field khác nhau.
 
@@ -511,6 +595,19 @@ y ≈ x
 ```
 
 Tức block dễ dàng trở thành identity.
+
+### Sơ đồ residual block
+
+```mermaid
+flowchart LR
+    X["Input x"] --> F["Các layer trong block<br/>F(x)"]
+    X --> S["Shortcut / identity"]
+    F --> A["Cộng"]
+    S --> A
+    A --> Y["Output<br/>y = F(x) + x"]
+```
+
+Nhánh shortcut tạo đường truyền trực tiếp cho thông tin và gradient, thay vì buộc mọi thông tin phải đi qua các convolution.
 
 ---
 
@@ -692,6 +789,19 @@ K*K*Cin*Cout
 ```
 
 Giảm rất mạnh chi phí.
+
+### Standard convolution và depthwise separable convolution
+
+```mermaid
+flowchart LR
+    A["Input<br/>H×W×Cin"] --> B["Standard conv<br/>K×K trên mọi channel"]
+    B --> C["Output<br/>H×W×Cout"]
+    A --> D["Depthwise conv<br/>mỗi channel một filter"]
+    D --> E["Pointwise conv<br/>1×1 trộn channel"]
+    E --> C
+```
+
+Standard convolution học đồng thời không gian và channel; MobileNet tách hai nhiệm vụ này để giảm số phép tính.
 
 ---
 
@@ -916,6 +1026,22 @@ FPN giúp detect object ở nhiều scale.
 
 FPN rất quan trọng cho object detection hiện đại.
 
+### Tiến hóa của R-CNN family
+
+```mermaid
+flowchart LR
+    A["R-CNN<br/>Selective Search"] --> B["CNN xử lý<br/>từng region"]
+    B --> C["Classify từng region"]
+    C --> D["Fast R-CNN<br/>CNN chạy một lần"]
+    D --> E["ROI Pooling"]
+    E --> F["Classifier + box refinement"]
+    F --> G["Faster R-CNN<br/>RPN thay Selective Search"]
+    G --> H["Region proposals học được"]
+    H --> I["Detection end-to-end hơn"]
+```
+
+Mỗi phiên bản giảm bớt bước xử lý riêng lẻ và đưa nhiều thành phần hơn vào quá trình học end-to-end.
+
 ---
 
 ## 8.3 YOLO là gì?
@@ -941,6 +1067,18 @@ image -> bounding boxes + classes + confidence
 - rất nhanh;
 - end-to-end;
 - phù hợp real-time detection.
+
+### Luồng xử lý YOLO
+
+```mermaid
+flowchart LR
+    A["Ảnh"] --> B["CNN<br/>một forward pass"]
+    B --> C["Grid S×S"]
+    C --> D["Bounding boxes<br/>class + confidence"]
+    D --> E["Lọc theo confidence"]
+    E --> F["NMS"]
+    F --> G["Các detection cuối cùng"]
+```
 
 ---
 
@@ -985,6 +1123,17 @@ Output:
 7 x 7 x (2*5 + 20)
 = 7 x 7 x 30
 ```
+
+### Từ grid đến output tensor
+
+```mermaid
+flowchart LR
+    A["Ảnh 448×448"] --> B["Chia thành grid 7×7"]
+    B --> C["Mỗi cell: 2 box<br/>× 5 giá trị + 20 class"]
+    C --> D["Output tensor<br/>7×7×30"]
+```
+
+Mỗi cell chứa hai bounding box, mỗi box có tọa độ và confidence; vector class được dùng chung cho các box của cell đó.
 
 ---
 
@@ -1098,6 +1247,20 @@ NMS xử lý như sau:
 2. xóa các box còn lại có IoU cao hơn ngưỡng;
 3. lặp lại.
 
+### Trực quan hóa quy trình NMS
+
+```mermaid
+flowchart TD
+    A["Nhiều box dự đoán"] --> B["Chọn box có confidence cao nhất"]
+    B --> C{"IoU của box khác<br/>vượt ngưỡng?"}
+    C -->|Có| D["Loại box trùng"]
+    C -->|Không| E["Giữ box"]
+    D --> F{"Còn box chưa xử lý?"}
+    E --> F
+    F -->|Có| B
+    F -->|Không| G["Danh sách detection"]
+```
+
 Ví dụ:
 
 ```python
@@ -1208,6 +1371,20 @@ Các nhóm thay đổi chính:
 4. inverted bottleneck;
 5. large kernel sizes;
 6. micro design.
+
+### Lộ trình hiện đại hóa ConvNeXt
+
+```mermaid
+flowchart LR
+    A["ResNet-50<br/>76.1%"] --> B["Training recipe<br/>78.8%"]
+    B --> C["Macro design<br/>79.4%"]
+    C --> D["Patchify stem<br/>79.5%"]
+    D --> E["Depthwise + 1×1<br/>80.5%"]
+    E --> F["Inverted bottleneck<br/>80.6%"]
+    F --> G["Kernel lớn + micro design<br/>82.0%"]
+```
+
+Các con số minh họa accuracy ImageNet-1K được nêu trong tài liệu tiếng Anh; chúng cho thấy tác động tích lũy của từng nhóm thay đổi.
 
 ---
 
