@@ -4,12 +4,13 @@ import { transformerArchitecture } from './models/transformer'
 import { vitArchitecture } from './models/vit'
 import { maskformerArchitecture } from './models/maskformer'
 import { oneformerArchitecture } from './models/oneformer'
+import { detrArchitecture } from './models/detr'
 
-const architectures = [oneformerArchitecture, maskformerArchitecture, vitArchitecture, transformerArchitecture]
+const architectures = [detrArchitecture, oneformerArchitecture, maskformerArchitecture, vitArchitecture, transformerArchitecture]
 
 export default function App() {
-  const [architectureId, setArchitectureId] = useState(oneformerArchitecture.id)
-  const definition = architectures.find((architecture) => architecture.id === architectureId) ?? oneformerArchitecture
+  const [architectureId, setArchitectureId] = useState(detrArchitecture.id)
+  const definition = architectures.find((architecture) => architecture.id === architectureId) ?? detrArchitecture
 
   const navigation = (
     <nav className="model-switch" aria-label="Architecture model">
