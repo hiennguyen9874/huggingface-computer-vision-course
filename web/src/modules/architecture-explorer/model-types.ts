@@ -2,6 +2,7 @@ export type TensorShape = Array<number | string>
 
 export type NodeKind =
   | 'image'
+  | 'input'
   | 'tensor'
   | 'linear'
   | 'normalization'
@@ -11,6 +12,12 @@ export type NodeKind =
   | 'output'
   | 'group'
   | 'parameter'
+
+export type ArchitecturePort = {
+  id: string
+  label?: string
+  direction: 'input' | 'output'
+}
 
 export type ArchitectureNode = {
   id: string
@@ -28,7 +35,8 @@ export type ArchitectureNode = {
   shapeDerivation?: string
   parameters?: Record<string, string | number>
   notes?: string[]
-  repetition?: number
+  repetition?: number | string
+  ports?: ArchitecturePort[]
 }
 
 export type ArchitectureEdge = {

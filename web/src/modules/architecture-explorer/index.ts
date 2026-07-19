@@ -5,6 +5,7 @@ export type {
   ArchitectureModel,
   ArchitectureNode,
   ArchitectureOptions,
+  ArchitecturePort,
   ArchitectureProjection,
   NodeKind,
   TensorShape,

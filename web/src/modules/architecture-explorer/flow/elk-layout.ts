@@ -7,6 +7,7 @@ export type LayoutDirection = 'RIGHT' | 'DOWN'
 
 const nodeSizes: Record<string, { width: number; height: number }> = {
   image: { width: 220, height: 250 },
+  input: { width: 230, height: 215 },
   tensor: { width: 230, height: 215 },
   linear: { width: 280, height: 260 },
   normalization: { width: 245, height: 220 },
@@ -24,7 +25,7 @@ export async function layoutArchitecture(nodes: Node[], edges: Edge[], direction
   const outputSide = horizontal ? 'EAST' : 'SOUTH'
 
   const graph: ElkNode = {
-    id: 'vit',
+    id: 'architecture',
     layoutOptions: {
       'elk.algorithm': 'layered',
       'elk.direction': direction,
@@ -38,15 +39,25 @@ export async function layoutArchitecture(nodes: Node[], edges: Edge[], direction
     },
     children: nodes.map((node) => {
       const size = nodeSizes[node.type ?? 'linear'] ?? nodeSizes.linear
+      const architectureNode = node.data as { ports?: Array<{ id: string; direction: 'input' | 'output' }> }
+      const ports = architectureNode.ports ?? [
+        { id: 'input', direction: 'input' as const },
+        { id: 'output', direction: 'output' as const },
+      ]
       return {
         id: node.id,
         width: size.width,
         height: size.height,
-        layoutOptions: { 'elk.portConstraints': 'FIXED_SIDE' },
-        ports: [
-          { id: `${node.id}:input`, width: 8, height: 8, layoutOptions: { 'elk.port.side': inputSide } },
-          { id: `${node.id}:output`, width: 8, height: 8, layoutOptions: { 'elk.port.side': outputSide } },
-        ],
+        layoutOptions: { 'elk.portConstraints': ports.length > 2 ? 'FIXED_ORDER' : 'FIXED_SIDE' },
+        ports: ports.map((port, index) => ({
+          id: `${node.id}:${port.id}`,
+          width: 8,
+          height: 8,
+          layoutOptions: {
+            'elk.port.side': port.direction === 'input' ? inputSide : outputSide,
+            'elk.port.index': String(index),
+          },
+        })),
       }
     }),
     edges: edges.map((edge): ElkExtendedEdge => ({

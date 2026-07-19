@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import katex from 'katex'
 import type { ArchitectureDefinition, ArchitectureNode, ArchitectureOptions, ArchitectureProjection } from './model-types'
 import { ArchitectureCanvas } from './flow/ArchitectureCanvas'
@@ -54,13 +54,13 @@ function DetailPanel({ node }: { node: ArchitectureNode | null }) {
         <span><i className="legend-line" /> activation / tensor flow</span>
         <span><i className="legend-line legend-line--residual" /> residual path</span>
         <span><i className="legend-line legend-line--dashed" /> learned parameter injection</span>
-        <p><code>N × T × D</code> = batch × tokens × embedding</p>
+        <p><code>B/N × T × D</code> = batch × tokens × embedding</p>
       </div>
     </aside>
   )
 }
 
-export function ArchitectureExplorer({ definition }: { definition: ArchitectureDefinition }) {
+export function ArchitectureExplorer({ definition, navigation }: { definition: ArchitectureDefinition; navigation?: ReactNode }) {
   const [direction, setDirection] = useState<LayoutDirection>('RIGHT')
   const [projection, setProjection] = useState<ArchitectureProjection>('overview')
   const [options, setOptions] = useState<ArchitectureOptions>(() => Object.fromEntries(definition.toggles?.map((toggle) => [toggle.id, toggle.defaultValue ?? false]) ?? []))
@@ -86,6 +86,7 @@ export function ArchitectureExplorer({ definition }: { definition: ArchitectureD
           <h1>{model.name} <span>{definition.badge}</span></h1>
           <p className="subtitle">{model.subtitle}</p>
         </div>
+        {navigation}
         <div className="header-metrics">
           {definition.metrics.map((metric) => <div key={metric.label}><strong>{metric.value}</strong><span>{metric.label}</span></div>)}
         </div>
