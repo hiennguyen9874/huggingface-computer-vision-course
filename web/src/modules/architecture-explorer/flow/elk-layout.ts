@@ -1,0 +1,68 @@
+import ELK, { type ElkExtendedEdge, type ElkNode } from 'elkjs/lib/elk.bundled.js'
+import { Position, type Edge, type Node } from '@xyflow/react'
+
+const elk = new ELK()
+
+export type LayoutDirection = 'RIGHT' | 'DOWN'
+
+const nodeSizes: Record<string, { width: number; height: number }> = {
+  image: { width: 220, height: 250 },
+  tensor: { width: 230, height: 215 },
+  linear: { width: 280, height: 260 },
+  normalization: { width: 245, height: 220 },
+  attention: { width: 330, height: 290 },
+  tensorOp: { width: 280, height: 235 },
+  fusion: { width: 260, height: 225 },
+  group: { width: 390, height: 320 },
+  output: { width: 230, height: 240 },
+  parameter: { width: 210, height: 185 },
+}
+
+export async function layoutArchitecture(nodes: Node[], edges: Edge[], direction: LayoutDirection) {
+  const horizontal = direction === 'RIGHT'
+  const inputSide = horizontal ? 'WEST' : 'NORTH'
+  const outputSide = horizontal ? 'EAST' : 'SOUTH'
+
+  const graph: ElkNode = {
+    id: 'vit',
+    layoutOptions: {
+      'elk.algorithm': 'layered',
+      'elk.direction': direction,
+      'elk.edgeRouting': 'ORTHOGONAL',
+      'elk.spacing.nodeNode': '54',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '104',
+      'elk.spacing.edgeNode': '26',
+      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+      'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+    },
+    children: nodes.map((node) => {
+      const size = nodeSizes[node.type ?? 'linear'] ?? nodeSizes.linear
+      return {
+        id: node.id,
+        width: size.width,
+        height: size.height,
+        layoutOptions: { 'elk.portConstraints': 'FIXED_SIDE' },
+        ports: [
+          { id: `${node.id}:input`, width: 8, height: 8, layoutOptions: { 'elk.port.side': inputSide } },
+          { id: `${node.id}:output`, width: 8, height: 8, layoutOptions: { 'elk.port.side': outputSide } },
+        ],
+      }
+    }),
+    edges: edges.map((edge): ElkExtendedEdge => ({
+      id: edge.id,
+      sources: [`${edge.source}:${edge.sourceHandle ?? 'output'}`],
+      targets: [`${edge.target}:${edge.targetHandle ?? 'input'}`],
+    })),
+  }
+
+  const result = await elk.layout(graph)
+  const positions = new Map(result.children?.map((child) => [child.id, { x: child.x ?? 0, y: child.y ?? 0 }]))
+
+  return nodes.map((node) => ({
+    ...node,
+    position: positions.get(node.id) ?? node.position,
+    sourcePosition: horizontal ? Position.Right : Position.Bottom,
+    targetPosition: horizontal ? Position.Left : Position.Top,
+  }))
+}
