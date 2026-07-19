@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { ArchitectureExplorer } from './modules/architecture-explorer'
 import { transformerArchitecture } from './models/transformer'
 import { vitArchitecture } from './models/vit'
+import { maskformerArchitecture } from './models/maskformer'
+import { oneformerArchitecture } from './models/oneformer'
 
-const architectures = [vitArchitecture, transformerArchitecture]
+const architectures = [oneformerArchitecture, maskformerArchitecture, vitArchitecture, transformerArchitecture]
 
 export default function App() {
-  const [architectureId, setArchitectureId] = useState(transformerArchitecture.id)
-  const definition = architectures.find((architecture) => architecture.id === architectureId) ?? transformerArchitecture
+  const [architectureId, setArchitectureId] = useState(oneformerArchitecture.id)
+  const definition = architectures.find((architecture) => architecture.id === architectureId) ?? oneformerArchitecture
 
   const navigation = (
     <nav className="model-switch" aria-label="Architecture model">

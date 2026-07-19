@@ -53,8 +53,9 @@ function DetailPanel({ node }: { node: ArchitectureNode | null }) {
         </div>
         <span><i className="legend-line" /> activation / tensor flow</span>
         <span><i className="legend-line legend-line--residual" /> residual path</span>
-        <span><i className="legend-line legend-line--dashed" /> learned parameter injection</span>
-        <p><code>B/N × T × D</code> = batch × tokens × embedding</p>
+          <span><i className="legend-line legend-line--dashed" /> learned parameter injection</span>
+          <span><i className="legend-line legend-line--auxiliary" /> auxiliary / training-only path</span>
+        <p><code>B/N × C × H × W</code> = image/feature map · <code>B/N × T × D</code> = token sequence</p>
       </div>
     </aside>
   )

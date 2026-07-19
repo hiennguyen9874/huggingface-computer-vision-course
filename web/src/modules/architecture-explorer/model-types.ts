@@ -4,8 +4,10 @@ export type NodeKind =
   | 'image'
   | 'input'
   | 'tensor'
+  | 'convolution'
   | 'linear'
   | 'normalization'
+  | 'activation'
   | 'attention'
   | 'tensorOp'
   | 'fusion'
@@ -24,7 +26,7 @@ export type ArchitectureNode = {
   kind: NodeKind
   label: string
   stage: string
-  visual?: 'image' | 'tokens' | 'transformer'
+  visual?: 'image' | 'tokens' | 'featureMap' | 'transformer'
   eyebrow: string
   description: string
   shape?: TensorShape
@@ -43,7 +45,7 @@ export type ArchitectureEdge = {
   id: string
   source: string
   target: string
-  kind: 'data' | 'parameter' | 'residual'
+  kind: 'data' | 'parameter' | 'residual' | 'auxiliary'
   label?: string
   sourcePort?: string
   targetPort?: string

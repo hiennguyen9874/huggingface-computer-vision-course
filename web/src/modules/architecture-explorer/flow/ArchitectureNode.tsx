@@ -29,12 +29,29 @@ function TensorGlyph({ parameter = false }: { parameter?: boolean }) {
   return <div className={`token-glyph${parameter ? ' token-glyph--parameter' : ''}`} aria-hidden="true">{Array.from({ length: parameter ? 3 : 8 }, (_, index) => <span key={index} />)}</div>
 }
 
+function FeatureMapGlyph({ shape }: { shape?: Array<number | string> }) {
+  const channels = Number(shape?.at(-3)) || 8
+  const spatial = Number(shape?.at(-1)) || 16
+  const layers = Math.max(2, Math.min(6, Math.round(Math.log2(channels)) - 2))
+  const side = Math.max(38, Math.min(76, Math.log2(Math.max(spatial, 2)) * 11))
+  return (
+    <svg className="feature-map-glyph" viewBox="0 0 126 82" role="img" aria-label={`Feature map with shape ${formatShape(shape) ?? 'symbolic'}`}>
+      {Array.from({ length: layers }, (_, index) => {
+        const offset = (layers - index - 1) * 5
+        return <rect key={index} x={8 + offset} y={7 + offset / 2} width={side} height={Math.max(32, side * .7)} rx="4" />
+      })}
+    </svg>
+  )
+}
+
 function OperationGlyph({ node }: { node: ArchitectureNode }) {
   const { kind } = node
   if (kind === 'attention') return <div className="attention-glyph" aria-hidden="true"><span>Q</span><span>K</span><span>V</span><b>ATTN</b><i>{node.parameters?.heads ? `${node.parameters.heads} heads` : 'multi-head attention'}</i></div>
   if (kind === 'fusion') return <div className="operation-glyph operation-glyph--fusion" aria-hidden="true"><span>＋</span><i>merge</i></div>
   if (kind === 'normalization') return <div className="operation-glyph operation-glyph--norm" aria-hidden="true"><span>μσ</span><i>normalize D</i></div>
+  if (kind === 'convolution') return <div className="operation-glyph operation-glyph--conv" aria-hidden="true"><span>▦ * K</span><i>convolution</i></div>
   if (kind === 'linear') return <div className="operation-glyph operation-glyph--linear" aria-hidden="true"><span>W·x+b</span><i>projection</i></div>
+  if (kind === 'activation') return <div className="operation-glyph operation-glyph--activation" aria-hidden="true"><span>ƒ(x)</span><i>activation</i></div>
   if (kind === 'tensorOp') return <div className="operation-glyph operation-glyph--reshape" aria-hidden="true"><span>▦ → ▥</span><i>tensor transform</i></div>
   return null
 }
@@ -67,7 +84,8 @@ export function ArchitectureNodeView({ data, selected, sourcePosition, targetPos
       <div className="node-topline"><span>{node.eyebrow}</span><span className="node-stage">{node.stage}</span></div>
       <h3>{node.label}{node.repetition ? <em className="node-repeat">×{node.repetition}</em> : null}</h3>
       {node.kind === 'image' || node.visual === 'image' ? <ImageGlyph /> : null}
-      {node.kind === 'tensor' || node.kind === 'parameter' || node.visual === 'tokens' ? <TensorGlyph parameter={node.kind === 'parameter'} /> : null}
+      {node.visual === 'featureMap' ? <FeatureMapGlyph shape={node.shape ?? node.outputShape} /> : null}
+      {(node.kind === 'tensor' && node.visual !== 'featureMap') || node.kind === 'parameter' || node.visual === 'tokens' ? <TensorGlyph parameter={node.kind === 'parameter'} /> : null}
       {node.visual === 'transformer' ? <TransformerDiagram node={node} /> : null}
       <OperationGlyph node={node} />
       {node.kind === 'output' ? <div className="logit-glyph" aria-hidden="true">{[34, 67, 48, 92, 57, 40, 72, 51, 29, 62].map((height, index) => <span key={index} style={{ height: `${height}%` }} />)}</div> : null}

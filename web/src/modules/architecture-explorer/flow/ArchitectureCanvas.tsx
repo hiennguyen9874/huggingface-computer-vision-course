@@ -24,8 +24,10 @@ const nodeTypes = {
   image: ArchitectureNodeView,
   input: ArchitectureNodeView,
   tensor: ArchitectureNodeView,
+  convolution: ArchitectureNodeView,
   linear: ArchitectureNodeView,
   normalization: ArchitectureNodeView,
+  activation: ArchitectureNodeView,
   attention: ArchitectureNodeView,
   tensorOp: ArchitectureNodeView,
   fusion: ArchitectureNodeView,
@@ -49,7 +51,7 @@ function SemanticEdge(props: EdgeProps) {
   })
   const highlight = (props.data as { highlight?: EdgeHighlight } | undefined)?.highlight
   const classes = [
-    props.type === 'parameter' ? 'parameter-edge' : props.type === 'residual' ? 'residual-edge' : 'data-edge',
+    props.type === 'parameter' ? 'parameter-edge' : props.type === 'residual' ? 'residual-edge' : props.type === 'auxiliary' ? 'auxiliary-edge' : 'data-edge',
     highlight ? `edge--${highlight}` : '',
   ].filter(Boolean).join(' ')
 
@@ -61,7 +63,7 @@ function SemanticEdge(props: EdgeProps) {
   )
 }
 
-const edgeTypes = { data: SemanticEdge, parameter: SemanticEdge, residual: SemanticEdge }
+const edgeTypes = { data: SemanticEdge, parameter: SemanticEdge, residual: SemanticEdge, auxiliary: SemanticEdge }
 
 function toFlowNodes(model: ArchitectureModel): Node[] {
   return model.nodes.map((node) => ({
@@ -171,7 +173,7 @@ function ArchitectureCanvasInner({ model, direction, onSelectNode }: CanvasProps
         proOptions={{ hideAttribution: true }}
       >
         <Background color="#24304a" gap={28} size={1} />
-        <MiniMap pannable zoomable nodeColor={(node) => ({ image: '#50bda1', input: '#50bda1', tensor: '#5d8ef0', linear: '#a879e6', normalization: '#73b8d2', attention: '#e7a64a', tensorOp: '#668fef', fusion: '#d58bd8', group: '#e7a64a', output: '#ec6687', parameter: '#8c96ad' })[node.type ?? 'linear'] ?? '#8c96ad'} maskColor="rgba(9, 14, 27, .72)" />
+        <MiniMap pannable zoomable nodeColor={(node) => ({ image: '#50bda1', input: '#50bda1', tensor: '#5d8ef0', convolution: '#53b9c9', linear: '#a879e6', normalization: '#73b8d2', activation: '#78c58b', attention: '#e7a64a', tensorOp: '#668fef', fusion: '#d58bd8', group: '#e7a64a', output: '#ec6687', parameter: '#8c96ad' })[node.type ?? 'linear'] ?? '#8c96ad'} maskColor="rgba(9, 14, 27, .72)" />
         <Controls showInteractive={false} />
       </ReactFlow>
       {!layoutReady ? <div className="layout-status">Arranging model graph…</div> : null}
